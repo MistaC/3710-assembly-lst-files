@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:06:56
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
 #Driver, Version 1      (Driver.asm			     Page 1 - 1
 
 
@@ -68,9 +68,9 @@ Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:06:56
  0000000C  13 07			adc		eax,[edi]			; add part of second value to part of first, including any carry
  0000000E  9C				pushfd						; preserve carry flag so it is not modified by following instructions
  0000000F  89 02			mov		[edx],eax			; move partial result into memory
- 00000011  83 C6 02			add		esi,TYPE WORD
- 00000014  83 C7 02			add		edi,TYPE WORD
- 00000017  83 C2 02			add		edx,TYPE WORD
+ 00000011  83 C6 02			add		esi,TYPE WORD		; select next item in num1
+ 00000014  83 C7 02			add		edi,TYPE WORD		; select next item in num2
+ 00000017  83 C2 02			add		edx,TYPE WORD		; select next result storage location in adsum
  0000001A  9D				popfd						; restore flags
  0000001B  E2 E8			loop	L1					; begin loop again and decrement ECX
  0000001D  66| 83 12 00			adc		WORD PTR [edx],0	; add the remaining carry, if any
@@ -136,7 +136,7 @@ Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:06:56
  000000FA  E8 00000000 E   *	    call   ExitProcess
  000000FF			main		endp
 				end			main
-Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:06:56
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
 #Driver, Version 1      (Driver.asm			     Symbols 2 - 1
 
 
