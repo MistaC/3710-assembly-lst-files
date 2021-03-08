@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/08/21 08:04:27
 #Driver, Version 1      (Driver.asm			     Page 1 - 1
 
 
@@ -31,14 +31,14 @@ Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
 	   5526 E4C3 48C2
  0000000C C392 ED40 92C6	num2		WORD 0C392h,0ED40h,92C6h,4F17h,2495h,1157h
 	   4F17 2495 1157
- 00000018  00000007 [		adsum		WORD 7 DUP(?)
+ 00000018  00000006 [		adsum		WORD 6 DUP(?)
 	    0000
 	   ]
- 00000026 F0AB 24C2 95A2	num3		WORD 0F0ABh,24C2h,95A2h,164Eh,2731h,1079h
+ 00000024 F0AB 24C2 95A2	num3		WORD 0F0ABh,24C2h,95A2h,164Eh,2731h,1079h
 	   164E 2731 1079
- 00000032 1265 3C7F 642E	num4		WORD 1265h,3C7Fh,642Eh,2324h,34E5h,0862h
+ 00000030 1265 3C7F 642E	num4		WORD 1265h,3C7Fh,642Eh,2324h,34E5h,0862h
 	   2324 34E5 0862
- 0000003E  00000007 [		susum		WORD 7 DUP(?)
+ 0000003C  00000006 [		susum		WORD 6 DUP(?)
 	    0000
 	   ]
 
@@ -108,27 +108,27 @@ Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
  0000007B  BB 00000002			mov		ebx,TYPE num2		; setting value for DumpMem
  00000080  E8 00000000 E		call	DumpMem				; display memory contents of adsum
  00000085  BE 00000018 R		mov		esi,OFFSET adsum	; setting value for DumpMem
- 0000008A  B9 00000007			mov		ecx,LENGTHOF adsum	; setting value for DumpMem
+ 0000008A  B9 00000006			mov		ecx,LENGTHOF adsum	; setting value for DumpMem
  0000008F  BB 00000002			mov		ebx,TYPE adsum		; setting value for DumpMem
  00000094  E8 00000000 E		call	DumpMem				; display memory contents of adsum
 
- 00000099  BE 00000026 R		mov		esi,OFFSET num3		; get start of num3
- 0000009E  BF 00000032 R		mov		edi,OFFSET num4		; get start of num4
- 000000A3  BA 0000003E R		mov		edx,OFFSET susum	; get location to store subtraction result
+ 00000099  BE 00000024 R		mov		esi,OFFSET num3		; get start of num3
+ 0000009E  BF 00000030 R		mov		edi,OFFSET num4		; get start of num4
+ 000000A3  BA 0000003C R		mov		edx,OFFSET susum	; get location to store subtraction result
  000000A8  BB 00000001			mov		ebx,1				; set identifier for SUBTRACTION
- 000000AD  B9 00000006			mov		ecx,LENGTHOF num1	; set counter
+ 000000AD  B9 00000006			mov		ecx,LENGTHOF num3	; set counter
  000000B2  E8 FFFFFF49			call	domath				; begin subtraction
  000000B7  E8 00000000 E		call	DumpRegs			; dump registers
- 000000BC  BE 00000026 R		mov		esi,OFFSET num3		; setting value for DumpMem
+ 000000BC  BE 00000024 R		mov		esi,OFFSET num3		; setting value for DumpMem
  000000C1  B9 00000006			mov		ecx,LENGTHOF num3	; setting value for DumpMem
  000000C6  BB 00000002			mov		ebx,TYPE num3		; setting value for DumpMem
  000000CB  E8 00000000 E		call	DumpMem				; display memory contents of adsum
- 000000D0  BE 00000032 R		mov		esi,OFFSET num4		; setting value for DumpMem
+ 000000D0  BE 00000030 R		mov		esi,OFFSET num4		; setting value for DumpMem
  000000D5  B9 00000006			mov		ecx,LENGTHOF num4	; setting value for DumpMem
  000000DA  BB 00000002			mov		ebx,TYPE num4		; setting value for DumpMem
  000000DF  E8 00000000 E		call	DumpMem				; display memory contents of adsum
- 000000E4  BE 0000003E R		mov		esi,OFFSET susum	; setting value for DumpMem
- 000000E9  B9 00000007			mov		ecx,LENGTHOF susum	; setting value for DumpMem
+ 000000E4  BE 0000003C R		mov		esi,OFFSET susum	; setting value for DumpMem
+ 000000E9  B9 00000006			mov		ecx,LENGTHOF susum	; setting value for DumpMem
  000000EE  BB 00000002			mov		ebx,TYPE susum		; setting value for DumpMem
  000000F3  E8 00000000 E		call	DumpMem				; display memory contents of susum
 					exit						; invoke code to terminate the program
@@ -136,7 +136,7 @@ Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
  000000FA  E8 00000000 E   *	    call   ExitProcess
  000000FF			main		endp
 				end			main
-Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/05/21 11:16:39
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/08/21 08:04:27
 #Driver, Version 1      (Driver.asm			     Symbols 2 - 1
 
 
@@ -184,7 +184,7 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 DWord	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000004C DWord	  Public  'DATA'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000048 DWord	  Public  'DATA'	
 _TEXT  . . . . . . . . . . . . .	32 Bit	 000000FF DWord	  Public  'CODE'	
 
 
@@ -348,10 +348,10 @@ lightRed . . . . . . . . . . . .	Number	 0000000Ch
 magenta  . . . . . . . . . . . .	Number	 00000005h   
 num1 . . . . . . . . . . . . . .	Word	 00000000 _DATA	
 num2 . . . . . . . . . . . . . .	Word	 0000000C _DATA	
-num3 . . . . . . . . . . . . . .	Word	 00000026 _DATA	
-num4 . . . . . . . . . . . . . .	Word	 00000032 _DATA	
+num3 . . . . . . . . . . . . . .	Word	 00000024 _DATA	
+num4 . . . . . . . . . . . . . .	Word	 00000030 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-susum  . . . . . . . . . . . . .	Word	 0000003E _DATA	
+susum  . . . . . . . . . . . . .	Word	 0000003C _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
 
