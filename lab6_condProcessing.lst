@@ -1,0 +1,410 @@
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/12/21 14:44:47
+;Conditional Processing, Version 1      (CondProcessing.asm  Page 1 - 1
+
+
+				TITLE Conditional Processing, Version 1      (CondProcessing.asm)
+				;-----------------------------------------------
+				; Chase Carroll
+				; CPEN 3710
+				; Mar 10, 2021
+				;
+				; This program takes signed integer user input
+				; and performs conditional processing on it.
+				; Program executes in protected mode.
+				;-----------------------------------------------
+				include Irvine32.inc				; needed for access to various functions
+			      C ; Include file for Irvine32.lib             (Irvine32.inc)
+			      C 
+			      C INCLUDE SmallWin.inc		; MS-Windows prototypes, structures, and constants
+			      C .NOLIST
+			      C .LIST
+			      C 
+			      C .NOLIST
+			      C .LIST
+			      C 
+
+ 00000000			.data								; set up variables and constants to use
+ 00000000 45 6E 74 65 72	helptxt	BYTE "Enter a signed 32-bit integer, or enter 0 to quit.",0
+	   20 61 20 73 69
+	   67 6E 65 64 20
+	   33 32 2D 62 69
+	   74 20 69 6E 74
+	   65 67 65 72 2C
+	   20 6F 72 20 65
+	   6E 74 65 72 20
+	   30 20 74 6F 20
+	   71 75 69 74 2E
+	   00
+ 00000033 50 72 6F 67 72	goodbye	BYTE "Program terminated. Goodbye.",0
+	   61 6D 20 74 65
+	   72 6D 69 6E 61
+	   74 65 64 2E 20
+	   47 6F 6F 64 62
+	   79 65 2E 00
+ 00000050 20 69 73 20 61	positive BYTE " is a positive number.",0
+	   20 70 6F 73 69
+	   74 69 76 65 20
+	   6E 75 6D 62 65
+	   72 2E 00
+ 00000067 20 69 73 20 6E	negative BYTE " is not a positive number.",0
+	   6F 74 20 61 20
+	   70 6F 73 69 74
+	   69 76 65 20 6E
+	   75 6D 62 65 72
+	   2E 00
+ 00000082 20 69 73 20 65	evenly BYTE " is evenly divisible by 4.",0
+	   76 65 6E 6C 79
+	   20 64 69 76 69
+	   73 69 62 6C 65
+	   20 62 79 20 34
+	   2E 00
+ 0000009D 20 69 73 20 6E	notevenly BYTE " is not evenly divisible by 4.",0
+	   6F 74 20 65 76
+	   65 6E 6C 79 20
+	   64 69 76 69 73
+	   69 62 6C 65 20
+	   62 79 20 34 2E
+	   00
+ 000000BC 20 63 61 6E 20	fiverep BYTE " can be represented in five decimal digits.",0
+	   62 65 20 72 65
+	   70 72 65 73 65
+	   6E 74 65 64 20
+	   69 6E 20 66 69
+	   76 65 20 64 65
+	   63 69 6D 61 6C
+	   20 64 69 67 69
+	   74 73 2E 00
+ 000000E8 20 63 61 6E 6E	nofiverep BYTE " cannot be represented in five decimal digits.",0
+	   6F 74 20 62 65
+	   20 72 65 70 72
+	   65 73 65 6E 74
+	   65 64 20 69 6E
+	   20 66 69 76 65
+	   20 64 65 63 69
+	   6D 61 6C 20 64
+	   69 67 69 74 73
+	   2E 00
+ 00000117 00000000		val	SDWORD ?
+ 0000011B 00000001		count DWORD 1
+
+ 00000000			.code
+ 00000000			main		proc					; no loops used as fallthrough is more useful
+ 00000000			A1:									; main label for start of conditional processing
+ 00000000  BA 00000000 R		mov		edx,OFFSET helptxt		; gets help text
+ 00000005  E8 00000000 E		call	WriteString				; prints help text
+ 0000000A  E8 00000000 E		call	Crlf					; prints carriage return
+ 0000000F  E8 00000000 E		call	ReadInt					; user input signed 32-bit integer into EAX register
+ 00000014  A3 00000117 R		mov		val,eax					; moves user input into variable for storage
+ 00000019  83 F8 00			cmp		eax,0					; check if eax contains 0
+ 0000001C  0F 84 000000EE		jz		F1						; if input 0, jump to program exit
+
+ 00000022			B1:									; positive
+ 00000022  83 F8 00			cmp		eax,0					; test if eax is 0
+ 00000025  7C 16			jl		B2						; if less than zero, i.e. negative
+ 00000027  E8 00000000 E		call	WriteInt				; print integer
+ 0000002C  BA 00000050 R		mov		edx,OFFSET positive		; get positive text
+ 00000031  E8 00000000 E		call	WriteString				; write positive text
+ 00000036  E8 00000000 E		call	Crlf					; carriage return
+ 0000003B  EB 14			jmp		C1						; skip to divisible processing
+ 0000003D			B2:									; negative
+ 0000003D  E8 00000000 E		call	WriteInt				; print integer
+ 00000042  BA 00000067 R		mov		edx,OFFSET negative		; get negative text
+ 00000047  E8 00000000 E		call	WriteString				; print negative text
+ 0000004C  E8 00000000 E		call	Crlf					; carriage return
+
+ 00000051			C1:									; divisible
+ 00000051  99				cdq								; prepare for signed division
+ 00000052  BB 00000004			mov		ebx,4					; move 4 into EBX register
+ 00000057  F7 FB			idiv	ebx						; divide by 4, putting remainder in EDX
+ 00000059  83 FA 00			cmp		edx,0					; check if edx contains 0
+ 0000005C  74 02			jz		C2						; if remainder 0, even division
+ 0000005E  EB 1B			jmp		C3						; if remainder !0, uneven division
+ 00000060			C2:									; if actually divisible by 4
+ 00000060  A1 00000117 R		mov		eax,val					; reset eax reg after manipulation
+ 00000065  E8 00000000 E		call	WriteInt				; print integer
+ 0000006A  BA 00000082 R		mov		edx,OFFSET evenly		; is divisible by 4
+ 0000006F  E8 00000000 E		call	WriteString				; print even text
+ 00000074  E8 00000000 E		call	Crlf					; carriage return
+ 00000079  EB 19			jmp		E1						; move on to digit count
+ 0000007B			C3:									; not divisible
+ 0000007B  A1 00000117 R		mov		eax,val					; reset eax reg after manipulation
+ 00000080  E8 00000000 E		call	WriteInt				; print integer
+ 00000085  BA 0000009D R		mov		edx,OFFSET notevenly	; is not divisible by 4
+ 0000008A  E8 00000000 E		call	WriteString				; print not even text
+ 0000008F  E8 00000000 E		call	Crlf					; carriage return
+
+ 00000094			E1:									; 5 digit space testing
+ 00000094  99				cdq								; prepare for signed division
+ 00000095  BB 0000000A			mov		ebx,10					; move 10 into EBX register
+ 0000009A  F7 FB			idiv	ebx						; divide by 10, i.e., remove one space
+ 0000009C  83 F8 00			cmp		eax,0					; check if eax contains 0
+ 0000009F  74 15			jz		E2						; if eax 0, jump to handler
+ 000000A1  FF 05 0000011B R		inc		count					; increment space counter
+ 000000A7  BA 00000005			mov		edx,5					; set desired space count
+ 000000AC  3B 15 0000011B R		cmp		edx,count				; check current recorded spaces
+ 000000B2  7C 34			jl		E3						; if input longer than 5 digits, jump to handler
+ 000000B4  EB DE			jmp		E1						; repeat loop until one of two conditions met
+ 000000B6  BA 00000005		E2:	mov		edx,5					; set desired space count
+ 000000BB  3B 15 0000011B R		cmp		edx,count				; check current recorded spaces
+ 000000C1  7C 25			jl		E3						; if input longer than 5 digits, jump to handler
+ 000000C3  A1 00000117 R		mov		eax,val					; ensure eax is set to original value for printing
+ 000000C8  E8 00000000 E		call	WriteInt				; print integer
+ 000000CD  BA 000000BC R		mov		edx,OFFSET fiverep		; get string
+ 000000D2  E8 00000000 E		call	WriteString				; print string
+ 000000D7  E8 00000000 E		call	Crlf					; carriage return
+ 000000DC  C7 05 0000011B R		mov		count,1					; reset count
+	   00000001
+ 000000E6  EB 23			jmp		rep1					; continue loop
+ 000000E8  A1 00000117 R	E3:	mov		eax,val					; ensure eax is set to original value for printing
+ 000000ED  E8 00000000 E		call	WriteInt				; print integer
+ 000000F2  BA 000000E8 R		mov		edx,OFFSET nofiverep	; get string
+ 000000F7  E8 00000000 E		call	WriteString				; print string
+ 000000FC  E8 00000000 E		call	Crlf					; carriage return
+ 00000101  C7 05 0000011B R		mov		count,1					; reset count
+	   00000001
+
+ 0000010B			rep1:								; repeat program until input is 0
+ 0000010B  E9 FFFFFEF0			jmp		A1
+
+ 00000110			F1:									; program finish label
+ 00000110  BA 00000033 R		mov		edx,OFFSET goodbye		; gets goodbye text
+ 00000115  E8 00000000 E		call	WriteString				; prints goodbye text
+ 0000011A  E8 00000000 E		call	Crlf					; prints carriage return
+					exit							; invoke code to terminate the program
+ 0000011F  6A 00	   *	    push   +000000000h
+ 00000121  E8 00000000 E   *	    call   ExitProcess
+ 00000126			main		endp
+				end			main
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    03/12/21 14:44:47
+;Conditional Processing, Version 1      (CondProcessing.asm  Symbols 2 - 1
+
+
+
+
+Structures and Unions:
+
+                N a m e                  Size
+                                         Offset      Type
+
+CONSOLE_CURSOR_INFO  . . . . . .	 00000005
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  bVisible . . . . . . . . . . .	 00000004	 Byte
+CONSOLE_SCREEN_BUFFER_INFO . . .	 00000016
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  dwCursorPos  . . . . . . . . .	 00000004	 DWord
+  wAttributes  . . . . . . . . .	 00000008	 Word
+  srWindow . . . . . . . . . . .	 0000000A	 QWord
+  maxWinSize . . . . . . . . . .	 00000012	 DWord
+COORD  . . . . . . . . . . . . .	 00000004
+  X  . . . . . . . . . . . . . .	 00000000	 Word
+  Y  . . . . . . . . . . . . . .	 00000002	 Word
+FILETIME . . . . . . . . . . . .	 00000008
+  loDateTime . . . . . . . . . .	 00000000	 DWord
+  hiDateTime . . . . . . . . . .	 00000004	 DWord
+SMALL_RECT . . . . . . . . . . .	 00000008
+  Left . . . . . . . . . . . . .	 00000000	 Word
+  Top  . . . . . . . . . . . . .	 00000002	 Word
+  Right  . . . . . . . . . . . .	 00000004	 Word
+  Bottom . . . . . . . . . . . .	 00000006	 Word
+SYSTEMTIME . . . . . . . . . . .	 00000010
+  wYear  . . . . . . . . . . . .	 00000000	 Word
+  wMonth . . . . . . . . . . . .	 00000002	 Word
+  wDayOfWeek . . . . . . . . . .	 00000004	 Word
+  wDay . . . . . . . . . . . . .	 00000006	 Word
+  wHour  . . . . . . . . . . . .	 00000008	 Word
+  wMinute  . . . . . . . . . . .	 0000000A	 Word
+  wSecond  . . . . . . . . . . .	 0000000C	 Word
+  wMilliseconds  . . . . . . . .	 0000000E	 Word
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 DWord	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000011F DWord	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000126 DWord	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+CloseHandle  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ClrScr . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CreateFileA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Crlf . . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Delay  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpMem  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpRegs . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FlushConsoleInputBuffer  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetCommandTail . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCP . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleScreenBufferInfo . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetDateTime  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetLocalTime . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetMseconds  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetNumberOfConsoleInputEvents  .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetStdHandle . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetSystemTime  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetTickCount . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Gotoxy . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Random32 . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+RandomRange  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Randomize  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadChar . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleA . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFile . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadHex  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleScreenBufferSize . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTextAttribute  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTitleA . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleWindowInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetFilePointer . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetTextColor . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Sleep  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_compare  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_copy . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_length . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_trim . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_ucase  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SystemTimeToFileTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WaitMsg  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteBin . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteChar  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleA  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputAttribute  . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputCharacterA . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteDec . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteHex . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteInt . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000126 Public STDCALL
+  A1 . . . . . . . . . . . . . .	L Near	 00000000 _TEXT	
+  B1 . . . . . . . . . . . . . .	L Near	 00000022 _TEXT	
+  B2 . . . . . . . . . . . . . .	L Near	 0000003D _TEXT	
+  C1 . . . . . . . . . . . . . .	L Near	 00000051 _TEXT	
+  C2 . . . . . . . . . . . . . .	L Near	 00000060 _TEXT	
+  C3 . . . . . . . . . . . . . .	L Near	 0000007B _TEXT	
+  E1 . . . . . . . . . . . . . .	L Near	 00000094 _TEXT	
+  E2 . . . . . . . . . . . . . .	L Near	 000000B6 _TEXT	
+  E3 . . . . . . . . . . . . . .	L Near	 000000E8 _TEXT	
+  rep1 . . . . . . . . . . . . .	L Near	 0000010B _TEXT	
+  F1 . . . . . . . . . . . . . .	L Near	 00000110 _TEXT	
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000003h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
+CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
+CreateFile . . . . . . . . . . .	Text   	 CreateFileA
+DO_NOT_SHARE . . . . . . . . . .	Number	 00000000h   
+ENABLE_ECHO_INPUT  . . . . . . .	Number	 00000004h   
+ENABLE_LINE_INPUT  . . . . . . .	Number	 00000002h   
+ENABLE_MOUSE_INPUT . . . . . . .	Number	 00000010h   
+ENABLE_PROCESSED_INPUT . . . . .	Number	 00000001h   
+ENABLE_PROCESSED_OUTPUT  . . . .	Number	 00000001h   
+ENABLE_WINDOW_INPUT  . . . . . .	Number	 00000008h   
+ENABLE_WRAP_AT_EOL_OUTPUT  . . .	Number	 00000002h   
+FALSE  . . . . . . . . . . . . .	Number	 00000000h   
+FILE_APPEND_DATA . . . . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_ARCHIVE . . . . .	Number	 00000020h   
+FILE_ATTRIBUTE_COMPRESSED  . . .	Number	 00000800h   
+FILE_ATTRIBUTE_DEVICE  . . . . .	Number	 00000040h   
+FILE_ATTRIBUTE_DIRECTORY . . . .	Number	 00000010h   
+FILE_ATTRIBUTE_ENCRYPTED . . . .	Number	 00004000h   
+FILE_ATTRIBUTE_HIDDEN  . . . . .	Number	 00000002h   
+FILE_ATTRIBUTE_NORMAL  . . . . .	Number	 00000080h   
+FILE_ATTRIBUTE_NOT_CONTENT_INDEXED .	Number	 00002000h   
+FILE_ATTRIBUTE_OFFLINE . . . . .	Number	 00001000h   
+FILE_ATTRIBUTE_READONLY  . . . .	Number	 00000001h   
+FILE_ATTRIBUTE_REPARSE_POINT . .	Number	 00000400h   
+FILE_ATTRIBUTE_SPARSE_FILE . . .	Number	 00000200h   
+FILE_ATTRIBUTE_SYSTEM  . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_TEMPORARY . . . .	Number	 00000100h   
+FILE_BEGIN . . . . . . . . . . .	Number	 00000000h   
+FILE_CURRENT . . . . . . . . . .	Number	 00000001h   
+FILE_DELETE_CHILD  . . . . . . .	Number	 00000040h   
+FILE_END . . . . . . . . . . . .	Number	 00000002h   
+FILE_READ_DATA . . . . . . . . .	Number	 00000001h   
+FILE_SHARE_DELETE  . . . . . . .	Number	 00000004h   
+FILE_SHARE_READ  . . . . . . . .	Number	 00000001h   
+FILE_SHARE_WRITE . . . . . . . .	Number	 00000002h   
+FILE_WRITE_DATA  . . . . . . . .	Number	 00000002h   
+FOCUS_EVENT  . . . . . . . . . .	Number	 00000010h   
+GENERIC_ALL  . . . . . . . . . .	Number	 10000000h   
+GENERIC_EXECUTE  . . . . . . . .	Number	 20000000h   
+GENERIC_READ . . . . . . . . . .	Number	 -80000000h   
+GENERIC_WRITE  . . . . . . . . .	Number	 40000000h   
+INVALID_HANDLE_VALUE . . . . . .	Number	 -00000001h   
+KEY_EVENT  . . . . . . . . . . .	Number	 00000001h   
+MENU_EVENT . . . . . . . . . . .	Number	 00000008h   
+MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h   
+NULL . . . . . . . . . . . . . .	Number	 00000000h   
+OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
+OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
+PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
+ReadConsoleInput . . . . . . . .	Text   	 ReadConsoleInputA
+ReadConsole  . . . . . . . . . .	Text   	 ReadConsoleA
+STD_INPUT_HANDLE . . . . . . . .	Number	 -0000000Ah   
+STD_OUTPUT_HANDLE  . . . . . . .	Number	 -0000000Bh   
+SetConsoleTitle  . . . . . . . .	Text   	 SetConsoleTitleA
+TRUE . . . . . . . . . . . . . .	Number	 00000001h   
+TRUNCATE_EXISTING  . . . . . . .	Number	 00000005h   
+WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
+WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
+WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
+black  . . . . . . . . . . . . .	Number	 00000000h   
+blue . . . . . . . . . . . . . .	Number	 00000001h   
+brown  . . . . . . . . . . . . .	Number	 00000006h   
+count  . . . . . . . . . . . . .	DWord	 0000011B _DATA	
+cyan . . . . . . . . . . . . . .	Number	 00000003h   
+evenly . . . . . . . . . . . . .	Byte	 00000082 _DATA	
+exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+fiverep  . . . . . . . . . . . .	Byte	 000000BC _DATA	
+goodbye  . . . . . . . . . . . .	Byte	 00000033 _DATA	
+gray . . . . . . . . . . . . . .	Number	 00000008h   
+green  . . . . . . . . . . . . .	Number	 00000002h   
+helptxt  . . . . . . . . . . . .	Byte	 00000000 _DATA	
+lightBlue  . . . . . . . . . . .	Number	 00000009h   
+lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
+lightGray  . . . . . . . . . . .	Number	 00000007h   
+lightGreen . . . . . . . . . . .	Number	 0000000Ah   
+lightMagenta . . . . . . . . . .	Number	 0000000Dh   
+lightRed . . . . . . . . . . . .	Number	 0000000Ch   
+magenta  . . . . . . . . . . . .	Number	 00000005h   
+negative . . . . . . . . . . . .	Byte	 00000067 _DATA	
+nofiverep  . . . . . . . . . . .	Byte	 000000E8 _DATA	
+notevenly  . . . . . . . . . . .	Byte	 0000009D _DATA	
+positive . . . . . . . . . . . .	Byte	 00000050 _DATA	
+red  . . . . . . . . . . . . . .	Number	 00000004h   
+val  . . . . . . . . . . . . . .	DWord	 00000117 _DATA	
+white  . . . . . . . . . . . . .	Number	 0000000Fh   
+yellow . . . . . . . . . . . . .	Number	 0000000Eh   
+
+	   0 Warnings
+	   0 Errors
