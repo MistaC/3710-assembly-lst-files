@@ -1,0 +1,1973 @@
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    04/11/21 21:04:59
+%Lottery, Version 1      (lottery.asm			     Page 1 - 1
+
+
+				TITLE Lottery, Version 1      (lottery.asm)
+				;-----------------------------------------------
+				; Chase Carroll
+				; CPEN 3710
+				; April 9, 2021
+				;
+				; This program simulates powerball lottery drawings.
+				; Main procedure is located at the bottom.
+				; Program executes in protected mode.
+				;-----------------------------------------------
+				include Irvine32.inc				; needed for access to various functions
+			      C ; Include file for Irvine32.lib             (Irvine32.inc)
+			      C 
+			      C INCLUDE SmallWin.inc		; MS-Windows prototypes, structures, and constants
+			      C .NOLIST
+			      C .LIST
+			      C 
+			      C .NOLIST
+			      C .LIST
+			      C 
+
+				;-----------------------------------------------
+				; Simple writing macro.
+				; RECEIVES: String to print, newline (1 = YES)
+				; RETURNS: Nothing
+				; REQUIRES: Nothing
+				; MODIFIES: Nothing
+				; Macro executes in protected mode.
+				;-----------------------------------------------
+				writ	MACRO string, newline
+					local	w0
+					.code
+					push	eax						; preserve EAX
+					push	edx						; preserve EDX
+					lea		edx,string				; get text
+					call	WriteString				; write text
+					mov		eax,newline				; get newline
+					cmp		eax,1					; 1 = newline ?
+					jne		w0						; NO: no newline
+					call	Crlf					; carriage return
+				w0:	pop		edx						; restore EDX
+					pop		eax						; restore EAX
+				ENDM
+
+				;-----------------------------------------------
+				; This macro compares the official drawing against
+				; the customer drawing to determine win state.
+				; RECEIVES: 'official' and 'customer' Powerball structs
+				; RETURNS: Nothing
+				; REQUIRES: Two struct variables
+				; MODIFIES: Nothing
+				; Macro executes in protected mode.
+				;-----------------------------------------------
+				detWin	MACRO official, customer
+					local	wCnt1
+					local	red1
+					local	pbRes1
+					local	pbRes2
+					local	pbRes3
+					local	pbRes4
+					local	pbRes5
+					local	pbRes6
+					local	pbRes7
+					local	cash1
+					local	cash2
+					local	cash3
+					local	cash4
+					local	cash5
+					local	cash6
+					local	loss
+					local	com
+					local	det1
+					local	det2
+					local	det2a
+					local	det3
+					local	r1
+					local	r2
+					local	wa0
+					local	wa1
+					local	wa2
+					local	wa3
+					local	wa4
+					local	wa5
+					local	wb3
+					local	wb4
+					local	wb5
+					local	wx0
+					local	wx1
+					.data
+					wCnt1	byte 0
+					red1	byte 0
+					pbRes1	byte "POWERBALL DRAWING RESULTS",0
+					pbRes2	byte "White: ",0
+					pbRes3	byte "Red: ",0
+					pbRes4	byte "You matched ",0
+					pbRes5	byte " white balls and ",0
+					pbRes6	byte " red balls.",0
+					pbRes7	byte "You won ",0
+					cash1	byte "$4!",0
+					cash2	byte "$7!",0
+					cash3	byte "$100!",0
+					cash4	byte "$50,000!",0
+					cash5	byte "$1 million!",0
+					cash6	byte "the Grand Prize!",0
+					loss	byte "You lost. Better luck next time.",0
+					com		byte ", ",0
+					.code
+					push	eax						; preserve EAX
+					push	ecx						; preserve ECX
+					push	edi						; preserve EDI
+					push	esi						; preserve ESI
+					lea		edi,official.white1		; get first field
+					lea		esi,customer.white1		; get first field
+					mov		ecx,5					; range of white
+				det1:
+					push	ecx						; preserve outer loop
+					mov		ecx,5					; set inner loop range
+				det2:
+					mov		eax,[esi]				; get customer field
+					cmp		eax,[edi]				; official = customer ?
+					jne		det2a					; NO
+					inc		wCnt1					; YES
+				det2a:
+					add		esi,type sdword			; get next customer white
+					loop	det2					; continue white checks
+					pop		ecx						; restore outer loop
+					add		edi,type sdword			; get next official white
+					lea		esi,customer.white1		; get first field again
+					loop	det1
+					lea		edi,official.red		; get official red
+					lea		esi,customer.red		; get customer red
+					mov		eax,[esi]				; get customer red
+					cmp		eax,[edi]				; official red = customer red ?
+					jne		det3					; NO
+					inc		red1					; YES
+				det3:
+					writ	pbRes1,1				; print text
+					writ	pbRes2,0				; print text
+					lea		edi,official.white1		; get field
+					mov		eax,[edi]				; get value
+					call	WriteDec				; print value
+					writ	com,0					; comma
+					add		edi,type sdword			; get next official
+					mov		eax,[edi]				; get value
+					call	WriteDec				; print value
+					writ	com,0					; comma
+					add		edi,type sdword			; get next official
+					mov		eax,[edi]				; get value
+					call	WriteDec				; print value
+					writ	com,0					; comma
+					add		edi,type sdword			; get next official
+					mov		eax,[edi]				; get value
+					call	WriteDec				; print value
+					writ	com,0					; comma
+					add		edi,type sdword			; get next official
+					mov		eax,[edi]				; get value
+					call	WriteDec				; print value
+					; writ	com,0					; comma
+					add		edi,type sdword			; get next official
+					call	Crlf					; carriage return
+					writ	pbRes3,0				; print text
+					mov		eax,[edi]				; get value
+					call	WriteDec				; print value
+					call	Crlf					; carriage return
+					writ	pbRes4,0				; print text
+					movzx	eax,wCnt1				; get value
+					call	WriteDec				; print value
+					writ	pbRes5,0				; print text
+					movzx	eax,red1				; get value
+					call	WriteDec				; print value
+					writ	pbRes6,1				; print text
+					movzx	eax,wCnt1				; get white count
+					cmp		red1,1					; 1 = red ?
+					jne		r2						; NO
+				r1: ; red1 1
+				wa0: ; white 0
+					cmp		eax,0					; check equality
+					jne		wa1						; NO
+					writ	pbRes7,0				; print text
+					writ	cash1,1					; print text
+					jmp		wx0						; finish
+				wa1: ; white 1
+					cmp		eax,1					; check equality
+					jne		wa2						; NO
+					writ	pbRes7,0				; print text
+					writ	cash1,1					; print text
+					jmp		wx0						; finish
+				wa2: ; white 2
+					cmp		eax,2					; check equality
+					jne		wa3						; NO
+					writ	pbRes7,0				; print text
+					writ	cash2,1					; print text
+					jmp		wx0						; finish
+				wa3: ; white 3
+					cmp		eax,3					; check equality
+					jne		wa4						; NO
+					writ	pbRes7,0				; print text
+					writ	cash3,1					; print text
+					jmp		wx0						; finish
+				wa4: ; white 4
+					cmp		eax,4					; check equality
+					jne		wa5						; NO
+					writ	pbRes7,0				; print text
+					writ	cash4,1					; print text
+					jmp		wx0						; finish
+				wa5: ; white 5
+					cmp		eax,5					; check equality
+					jne		wx1						; NO
+					writ	pbRes7,0				; print text
+					writ	cash6,1					; print text
+					jmp		wx0						; finish
+				r2: ; red1 0
+				wb3: ; white 3
+					cmp		eax,3					; check equality
+					jne		wb4						; NO
+					writ	pbRes7,0				; print text
+					writ	cash2,1					; print text
+					jmp		wx0						; finish
+				wb4: ; white 4
+					cmp		eax,4					; check equality
+					jne		wb5						; NO
+					writ	pbRes7,0				; print text
+					writ	cash3,1					; print text
+					jmp		wx0						; finish
+				wb5: ; white 5
+					cmp		eax,5					; check equality
+					jne		wx1						; NO
+					writ	pbRes7,0				; print text
+					writ	cash5,1					; print text
+					jmp		wx0						; finish
+				wx1: ; total loss
+					writ	loss,1					; print text
+				wx0: ; finish label
+					call	Crlf					; carriage return
+					mov		wCnt1,0					; zero out white count
+					mov		red1,0					; zero out red
+					pop		esi						; restore ESI
+					pop		edi						; restore EDI
+					pop		ecx						; restore ECX
+					pop		eax						; restore EAX
+				ENDM
+
+				;-----------------------------------------------
+				; This macro checks the fields of the 'customer'
+				; Powerball struct against a value to determine
+				; if duplication would occur from the value's
+				; inclusion.
+				; RECEIVES: Integer, initialized Powerball struct
+				; RETURNS: Status code in EDX
+				; REQUIRES: Nothing
+				; MODIFIES: EDX
+				; Macro executes in protected mode.
+				;-----------------------------------------------
+				chkDups	MACRO val, customer
+					local	chdu1
+					local	chdu2
+					local	chdu0
+					.code
+					push	edi
+					lea		edi,customer.white1		; get initial field
+					cmp		val,[edi]				; checking equality
+					je		chdu2					; is duplicate?
+					add		edi,type sdword			; get next byte field
+					cmp		val,[edi]				; checking equality
+					je		chdu2					; is duplicate?
+					add		edi,type sdword			; get next byte field
+					cmp		val,[edi]				; checking equality
+					je		chdu2					; is duplicate?
+					add		edi,type sdword			; get next byte field
+					cmp		val,[edi]				; checking equality
+					je		chdu2					; is duplicate?
+					add		edi,type sdword			; get next byte field
+					cmp		val,[edi]				; checking equality
+					je		chdu2					; is duplicate?
+				chdu1:
+					mov		edx,0					; no duplicates
+					jmp		chdu0					; exit macro
+				chdu2:
+					mov		edx,1					; found duplicate
+				chdu0:
+					pop		edi
+				ENDM
+
+				;-----------------------------------------------
+				; This macro clears all fields of the provided
+				; Powerball struct.
+				; RECEIVES: Initialized Powerball struct
+				; RETURNS: Modified Powerball struct
+				; REQUIRES: Nothing
+				; MODIFIES: Nothing
+				; Macro executes in protected mode.
+				;-----------------------------------------------
+				reset	MACRO power
+					.code
+					push	eax						; preserve EAX
+					push	edi						; preserve EDI
+					mov		eax,0					; get zero
+					lea		edi,power.white1		; get initial field
+					mov		[edi],eax				; zero out field
+					add		edi,type sdword			; get next field
+					mov		[edi],eax				; zero out field
+					add		edi,type sdword			; get next field
+					mov		[edi],eax				; zero out field
+					add		edi,type sdword			; get next field
+					mov		[edi],eax				; zero out field
+					add		edi,type sdword			; get next field
+					mov		[edi],eax				; zero out field
+					add		edi,type sdword			; get next field
+					mov		[edi],eax				; zero out field
+					pop		edi						; restore EDI
+					pop		eax						; restore EAX
+				ENDM
+
+				;-----------------------------------------------
+				; This macro takes user input to fill a Powerball
+				; struct. It performs input sanitation.
+				; RECEIVES: Uninitialized Powerball struct
+				; RETURNS: Modified Powerball struct
+				; REQUIRES: Nothing
+				; MODIFIES: The struct
+				; Macro executes in protected mode.
+				;-----------------------------------------------
+				getT	MACRO customer
+					local 	txt1
+					local 	txt2
+					local 	txt3
+					local 	invch1
+					local 	invch2
+					local 	invch3
+					local 	gtic1
+					local 	gtic2
+					local 	gtic0
+					local 	gticinv1
+					local	gticinv2
+					local	gticinv3
+					.data
+					txt1 	byte "Pick five numbers between 1 and 69 for white.",0
+					txt2 	byte "Pick a number between 1 and 26 for red.",0
+					txt3 	byte "Choice: ",0
+					invch1 	byte "Can't pick number outside range 1 to 69. Try again.",0
+					invch2 	byte "Can't pick number outside range 1 to 26. Try again.",0
+					invch3 	byte "Can't pick duplicate numbers. Try again.",0
+					.code
+					push 	eax						; preserve eax
+					push	ebx						; preserve ebx
+					push 	ecx						; preserve ecx
+					push 	edx						; preserve edx
+					push	edi						; preserve edi
+					mov		ecx,5					; range to fill for white
+					lea		edi,customer.white1		; get initial field
+					writ	txt1,1					; print text
+				gtic1:								; fill white loop
+					writ	txt3,0					; print text
+					call	ReadInt					; user input into EAX
+					cmp		eax,69					; 69 - user input
+					ja		gticinv1				; user input too large
+					cmp		eax,0					; 0 - user input
+					jbe		gticinv1				; user input too small
+					;CHECK FOR DUPLICATES BELOW HERE
+					mov		ebx,eax					; prep for dup check
+					chkDups	ebx,customer			; check for duplication error
+					cmp		edx,1					; EDX contains status code
+					je		gticinv2				; if 1 = EDX, duplicate user input detected
+					mov		edx,0					; if 1 != EDX, clear EDX and continue
+					;SET FIELD VALUE BELOW HERE
+					mov		[edi],eax				; set current field
+					add		edi,type sdword			; get next byte field
+					mov		eax,0
+					loop	gtic1					; loop for white ball
+					;EDI OFFSET FOR RED BY NOW
+					jmp		gtic2					; go to red ball label
+				gticinv1:							; white ball out of range
+					writ	invch1,1				; print text
+					jmp		gtic1					; return to top of loop without dec ECX
+				gticinv2:							; white ball out of range
+					writ	invch3,1				; print text
+					mov		edx,0
+					jmp		gtic1					; return to top of loop without dec ECX
+				gtic2:								; set red label
+					writ	txt2,1					; print text
+					writ	txt3,0					; print text
+					call	ReadInt					; user input into EAX
+					cmp		eax,26					; 26 - user input
+					ja		gticinv3				; user input too large
+					cmp		eax,0					; 0 - user input
+					jbe		gticinv3				; user input too small
+					;SET FIELD VALUE BELOW HERE
+					mov		[edi],eax				; set current field
+					jmp		gtic0					; finished
+				gticinv3:
+					writ	invch2,1				; print text
+					jmp		gtic2					; retry
+				gtic0:								; completion label
+					pop		edi						; restore edi
+					pop 	edx						; restore edx
+					pop 	ecx						; restore ecx
+					pop		ebx						; restore ebx
+					pop 	eax						; restore eax
+				ENDM
+
+				;-----------------------------------------------
+				; This macro fills the Powerball struct 'target'
+				; with numbers for all its fields.
+				; RECEIVES: Uninitialized Powerball struct
+				; RETURNS: Modified struct
+				; REQUIRES: Nothing
+				; MODIFIES: The struct
+				; Macro executes in protected mode.
+				;-----------------------------------------------
+				drawB	MACRO target
+					local	dB1
+					local	dB2
+					local	dB3
+					local	dB4
+					local	dB5
+					local	dB6
+					.code
+					push	eax						; preserve EAX
+					push	edx						; preserve EDX
+					push	edi						; preserve EDI
+					lea		edi,target.white1		; get first field
+				dB1:
+					mov		eax,0					; zero out EAX
+					mov		eax,69					; get range value
+					call	RandomRange				; get random int
+					add		eax,1					; account for possible 0
+					chkDups	eax,target				; check for duplication error
+					cmp		edx,1					; EDX contains status code
+					je		dB1						; if 1 = EDX, duplicate user input detected
+					mov		[edi],eax 				; set white1
+					add		edi,type sdword			; get next field
+				dB2:
+					mov		eax,0					; zero out EAX
+					mov		eax,69					; get range value
+					call	RandomRange				; get random int
+					add		eax,1					; account for possible 0
+					chkDups	eax,target				; check for duplication error
+					cmp		edx,1					; EDX contains status code
+					je		dB2						; if 1 = EDX, duplicate user input detected
+					mov		[edi],eax 				; set white2
+					add		edi,type sdword			; get next field
+				dB3:
+					mov		eax,0					; zero out EAX
+					mov		eax,69					; get range value
+					call	RandomRange				; get random int
+					add		eax,1					; account for possible 0
+					chkDups	eax,target				; check for duplication error
+					cmp		edx,1					; EDX contains status code
+					je		dB3						; if 1 = EDX, duplicate user input detected
+					mov		[edi],eax 				; set white3
+					add		edi,type sdword			; get next field
+				dB4:
+					mov		eax,0					; zero out EAX
+					mov		eax,69					; get range value
+					call	RandomRange				; get random int
+					add		eax,1					; account for possible 0
+					chkDups	eax,target				; check for duplication error
+					cmp		edx,1					; EDX contains status code
+					je		dB4						; if 1 = EDX, duplicate user input detected
+					mov		[edi],eax 				; set white4
+					add		edi,type sdword			; get next field
+				dB5:
+					mov		eax,0					; zero out EAX
+					mov		eax,69					; get range value
+					call	RandomRange				; get random int
+					add		eax,1					; account for possible 0
+					chkDups	eax,target				; check for duplication error
+					cmp		edx,1					; EDX contains status code
+					je		dB5						; if 1 = EDX, duplicate user input detected
+					mov		[edi],eax 				; set white5
+					add		edi,type sdword			; get next field
+				dB6:
+					mov		eax,0					; zero out EAX
+					mov		eax,26					; get range value
+					call	RandomRange				; get random int
+					add		eax,1					; account for possible 0
+					mov		[edi],eax 				; set red
+					pop		edi						; restore EDI
+					pop		edx						; restore EDX
+					pop		eax						; restore EAX
+				ENDM
+
+				;-----------------------------------------------
+				; Powerball struct.
+				; Init to 0 for arithmetic comparisons.
+				; 0 ball not legal, always init before use.
+				;-----------------------------------------------
+ 00000018			Powerball		struct
+ 00000000  00000000			white1	sdword 0
+ 00000004  00000000			white2 	sdword 0
+ 00000008  00000000			white3 	sdword 0
+ 0000000C  00000000			white4 	sdword 0
+ 00000010  00000000			white5 	sdword 0
+ 00000014  00000000			red		sdword 0
+				Powerball		ends
+
+				;-----------------------------------------------
+				; Main procedure.
+				; Procedure executes in protected mode.
+				;-----------------------------------------------
+ 00000000			.data								; set up variables and constants to use
+ 00000000 00000000		drawing Powerball <>				; for the official powerball drawing
+	   00000000
+	   00000000
+	   00000000
+	   00000000
+	   00000000
+ 00000018 00000000		customer Powerball <>				; for the user powerball ticket
+	   00000000
+	   00000000
+	   00000000
+	   00000000
+	   00000000
+ 00000030 45 6E 74 65 72	prompt byte "Enter 1 to play or 0 to quit!",0
+	   20 31 20 74 6F
+	   20 70 6C 61 79
+	   20 6F 72 20 30
+	   20 74 6F 20 71
+	   75 69 74 21 00
+ 0000004E 43 68 6F 69 63	choice byte "Choice: ",0
+	   65 3A 20 00
+ 00000057 54 68 61 74 27	oops byte "That's not an option! Try again!",0
+	   73 20 6E 6F 74
+	   20 61 6E 20 6F
+	   70 74 69 6F 6E
+	   21 20 54 72 79
+	   20 61 67 61 69
+	   6E 21 00
+ 00000078 47 6F 6F 64 62	bye byte "Goodbye!",0
+	   79 65 21 00
+ 00000081 54 48 45 20 4F	DEV1 byte "THE OFFICIAL DRAWING IS",0
+	   46 46 49 43 49
+	   41 4C 20 44 52
+	   41 57 49 4E 47
+	   20 49 53 00
+ 00000099 57 68 69 74 65	DEV2 byte "White: ",0
+	   3A 20 00
+ 000000A1 52 65 64 3A 20	DEV3 byte "Red: ",0
+	   00
+ 000000A7 2C 20 00		DEV4 byte ", ",0
+ 00000000			.code
+ 00000000			main		proc
+ 00000000			L1: writ	prompt,1				; print text
+ 00000000		     1		.code
+ 00000000  50		     1		push	eax						; preserve EAX
+ 00000001  52		     1		push	edx						; preserve EDX
+ 00000002  8D 15 00000030 R  1		lea		edx,prompt				; get text
+ 00000008  E8 00000000 E     1		call	WriteString				; write text
+ 0000000D  B8 00000001	     1		mov		eax,1				; get newline
+ 00000012  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 00000015  75 05	     1		jne		??0000						; NO: no newline
+ 00000017  E8 00000000 E     1		call	Crlf					; carriage return
+ 0000001C  5A		     1	??0000:	pop		edx						; restore EDX
+ 0000001D  58		     1		pop		eax						; restore EAX
+					writ	choice,0				; print text
+ 0000001E		     1		.code
+ 0000001E  50		     1		push	eax						; preserve EAX
+ 0000001F  52		     1		push	edx						; preserve EDX
+ 00000020  8D 15 0000004E R  1		lea		edx,choice				; get text
+ 00000026  E8 00000000 E     1		call	WriteString				; write text
+ 0000002B  B8 00000000	     1		mov		eax,0				; get newline
+ 00000030  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 00000033  75 05	     1		jne		??0001						; NO: no newline
+ 00000035  E8 00000000 E     1		call	Crlf					; carriage return
+ 0000003A  5A		     1	??0001:	pop		edx						; restore EDX
+ 0000003B  58		     1		pop		eax						; restore EAX
+ 0000003C  E8 00000000 E		call	ReadInt					; get user choice
+ 00000041  E8 00000000 E		call	Crlf					; carriage return
+ 00000046  83 F8 00			cmp		eax,0					; EAX = 0 ?
+ 00000049  0F 84 00000960		je		L3						; YES
+ 0000004F  83 F8 01			cmp		eax,1					; EAX = 1 ?
+ 00000052  0F 85 00000934		jne		L2						; YES
+ 00000058  E8 00000000 E		call	Randomize				; randomize number generation
+					drawB	drawing					; get official powerball drawing
+ 0000005D		     1		.code
+ 0000005D  50		     1		push	eax						; preserve EAX
+ 0000005E  52		     1		push	edx						; preserve EDX
+ 0000005F  57		     1		push	edi						; preserve EDI
+ 00000060  8D 3D 00000000 R  1		lea		edi,drawing.white1		; get first field
+ 00000066		     1	??0002:
+ 00000066  B8 00000000	     1		mov		eax,0					; zero out EAX
+ 0000006B  B8 00000045	     1		mov		eax,69					; get range value
+ 00000070  E8 00000000 E     1		call	RandomRange				; get random int
+ 00000075  83 C0 01	     1		add		eax,1					; account for possible 0
+ 00000078		     2		.code
+ 00000078  57		     2		push	edi
+ 00000079  8D 3D 00000000 R  2		lea		edi,drawing.white1		; get initial field
+ 0000007F  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000081  74 23	     2		je		??0009					; is duplicate?
+ 00000083  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 00000086  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000088  74 1C	     2		je		??0009					; is duplicate?
+ 0000008A  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000008D  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 0000008F  74 15	     2		je		??0009					; is duplicate?
+ 00000091  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 00000094  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000096  74 0E	     2		je		??0009					; is duplicate?
+ 00000098  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000009B  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 0000009D  74 07	     2		je		??0009					; is duplicate?
+ 0000009F		     2	??0008:
+ 0000009F  BA 00000000	     2		mov		edx,0					; no duplicates
+ 000000A4  EB 05	     2		jmp		??000A					; exit macro
+ 000000A6		     2	??0009:
+ 000000A6  BA 00000001	     2		mov		edx,1					; found duplicate
+ 000000AB		     2	??000A:
+ 000000AB  5F		     2		pop		edi
+ 000000AC  83 FA 01	     1		cmp		edx,1					; EDX contains status code
+ 000000AF  74 B5	     1		je		??0002						; if 1 = EDX, duplicate user input detected
+ 000000B1  89 07	     1		mov		[edi],eax 				; set white1
+ 000000B3  83 C7 04	     1		add		edi,type sdword			; get next field
+ 000000B6		     1	??0003:
+ 000000B6  B8 00000000	     1		mov		eax,0					; zero out EAX
+ 000000BB  B8 00000045	     1		mov		eax,69					; get range value
+ 000000C0  E8 00000000 E     1		call	RandomRange				; get random int
+ 000000C5  83 C0 01	     1		add		eax,1					; account for possible 0
+ 000000C8		     2		.code
+ 000000C8  57		     2		push	edi
+ 000000C9  8D 3D 00000000 R  2		lea		edi,drawing.white1		; get initial field
+ 000000CF  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000000D1  74 23	     2		je		??000C					; is duplicate?
+ 000000D3  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000000D6  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000000D8  74 1C	     2		je		??000C					; is duplicate?
+ 000000DA  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000000DD  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000000DF  74 15	     2		je		??000C					; is duplicate?
+ 000000E1  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000000E4  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000000E6  74 0E	     2		je		??000C					; is duplicate?
+ 000000E8  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000000EB  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000000ED  74 07	     2		je		??000C					; is duplicate?
+ 000000EF		     2	??000B:
+ 000000EF  BA 00000000	     2		mov		edx,0					; no duplicates
+ 000000F4  EB 05	     2		jmp		??000D					; exit macro
+ 000000F6		     2	??000C:
+ 000000F6  BA 00000001	     2		mov		edx,1					; found duplicate
+ 000000FB		     2	??000D:
+ 000000FB  5F		     2		pop		edi
+ 000000FC  83 FA 01	     1		cmp		edx,1					; EDX contains status code
+ 000000FF  74 B5	     1		je		??0003						; if 1 = EDX, duplicate user input detected
+ 00000101  89 07	     1		mov		[edi],eax 				; set white2
+ 00000103  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000106		     1	??0004:
+ 00000106  B8 00000000	     1		mov		eax,0					; zero out EAX
+ 0000010B  B8 00000045	     1		mov		eax,69					; get range value
+ 00000110  E8 00000000 E     1		call	RandomRange				; get random int
+ 00000115  83 C0 01	     1		add		eax,1					; account for possible 0
+ 00000118		     2		.code
+ 00000118  57		     2		push	edi
+ 00000119  8D 3D 00000000 R  2		lea		edi,drawing.white1		; get initial field
+ 0000011F  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000121  74 23	     2		je		??000F					; is duplicate?
+ 00000123  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 00000126  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000128  74 1C	     2		je		??000F					; is duplicate?
+ 0000012A  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000012D  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 0000012F  74 15	     2		je		??000F					; is duplicate?
+ 00000131  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 00000134  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000136  74 0E	     2		je		??000F					; is duplicate?
+ 00000138  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000013B  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 0000013D  74 07	     2		je		??000F					; is duplicate?
+ 0000013F		     2	??000E:
+ 0000013F  BA 00000000	     2		mov		edx,0					; no duplicates
+ 00000144  EB 05	     2		jmp		??0010					; exit macro
+ 00000146		     2	??000F:
+ 00000146  BA 00000001	     2		mov		edx,1					; found duplicate
+ 0000014B		     2	??0010:
+ 0000014B  5F		     2		pop		edi
+ 0000014C  83 FA 01	     1		cmp		edx,1					; EDX contains status code
+ 0000014F  74 B5	     1		je		??0004						; if 1 = EDX, duplicate user input detected
+ 00000151  89 07	     1		mov		[edi],eax 				; set white3
+ 00000153  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000156		     1	??0005:
+ 00000156  B8 00000000	     1		mov		eax,0					; zero out EAX
+ 0000015B  B8 00000045	     1		mov		eax,69					; get range value
+ 00000160  E8 00000000 E     1		call	RandomRange				; get random int
+ 00000165  83 C0 01	     1		add		eax,1					; account for possible 0
+ 00000168		     2		.code
+ 00000168  57		     2		push	edi
+ 00000169  8D 3D 00000000 R  2		lea		edi,drawing.white1		; get initial field
+ 0000016F  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000171  74 23	     2		je		??0012					; is duplicate?
+ 00000173  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 00000176  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000178  74 1C	     2		je		??0012					; is duplicate?
+ 0000017A  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000017D  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 0000017F  74 15	     2		je		??0012					; is duplicate?
+ 00000181  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 00000184  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 00000186  74 0E	     2		je		??0012					; is duplicate?
+ 00000188  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000018B  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 0000018D  74 07	     2		je		??0012					; is duplicate?
+ 0000018F		     2	??0011:
+ 0000018F  BA 00000000	     2		mov		edx,0					; no duplicates
+ 00000194  EB 05	     2		jmp		??0013					; exit macro
+ 00000196		     2	??0012:
+ 00000196  BA 00000001	     2		mov		edx,1					; found duplicate
+ 0000019B		     2	??0013:
+ 0000019B  5F		     2		pop		edi
+ 0000019C  83 FA 01	     1		cmp		edx,1					; EDX contains status code
+ 0000019F  74 B5	     1		je		??0005						; if 1 = EDX, duplicate user input detected
+ 000001A1  89 07	     1		mov		[edi],eax 				; set white4
+ 000001A3  83 C7 04	     1		add		edi,type sdword			; get next field
+ 000001A6		     1	??0006:
+ 000001A6  B8 00000000	     1		mov		eax,0					; zero out EAX
+ 000001AB  B8 00000045	     1		mov		eax,69					; get range value
+ 000001B0  E8 00000000 E     1		call	RandomRange				; get random int
+ 000001B5  83 C0 01	     1		add		eax,1					; account for possible 0
+ 000001B8		     2		.code
+ 000001B8  57		     2		push	edi
+ 000001B9  8D 3D 00000000 R  2		lea		edi,drawing.white1		; get initial field
+ 000001BF  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000001C1  74 23	     2		je		??0015					; is duplicate?
+ 000001C3  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000001C6  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000001C8  74 1C	     2		je		??0015					; is duplicate?
+ 000001CA  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000001CD  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000001CF  74 15	     2		je		??0015					; is duplicate?
+ 000001D1  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000001D4  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000001D6  74 0E	     2		je		??0015					; is duplicate?
+ 000001D8  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000001DB  3B 07	     2		cmp		eax,[edi]				; checking equality
+ 000001DD  74 07	     2		je		??0015					; is duplicate?
+ 000001DF		     2	??0014:
+ 000001DF  BA 00000000	     2		mov		edx,0					; no duplicates
+ 000001E4  EB 05	     2		jmp		??0016					; exit macro
+ 000001E6		     2	??0015:
+ 000001E6  BA 00000001	     2		mov		edx,1					; found duplicate
+ 000001EB		     2	??0016:
+ 000001EB  5F		     2		pop		edi
+ 000001EC  83 FA 01	     1		cmp		edx,1					; EDX contains status code
+ 000001EF  74 B5	     1		je		??0006						; if 1 = EDX, duplicate user input detected
+ 000001F1  89 07	     1		mov		[edi],eax 				; set white5
+ 000001F3  83 C7 04	     1		add		edi,type sdword			; get next field
+ 000001F6		     1	??0007:
+ 000001F6  B8 00000000	     1		mov		eax,0					; zero out EAX
+ 000001FB  B8 0000001A	     1		mov		eax,26					; get range value
+ 00000200  E8 00000000 E     1		call	RandomRange				; get random int
+ 00000205  83 C0 01	     1		add		eax,1					; account for possible 0
+ 00000208  89 07	     1		mov		[edi],eax 				; set red
+ 0000020A  5F		     1		pop		edi						; restore EDI
+ 0000020B  5A		     1		pop		edx						; restore EDX
+ 0000020C  58		     1		pop		eax						; restore EAX
+					; BELOW CODE HELPS TEST WINNING/LOSING SCENARIOS
+					; COMMENT OUT THE BELOW CODE TO PLAY NORMAL POWERBALL
+ 0000020D  50				push	eax
+ 0000020E  57				push	edi
+					writ	DEV1,1
+ 0000020F		     1		.code
+ 0000020F  50		     1		push	eax						; preserve EAX
+ 00000210  52		     1		push	edx						; preserve EDX
+ 00000211  8D 15 00000081 R  1		lea		edx,DEV1				; get text
+ 00000217  E8 00000000 E     1		call	WriteString				; write text
+ 0000021C  B8 00000001	     1		mov		eax,1				; get newline
+ 00000221  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 00000224  75 05	     1		jne		??0017						; NO: no newline
+ 00000226  E8 00000000 E     1		call	Crlf					; carriage return
+ 0000022B  5A		     1	??0017:	pop		edx						; restore EDX
+ 0000022C  58		     1		pop		eax						; restore EAX
+					writ	DEV2,0
+ 0000022D		     1		.code
+ 0000022D  50		     1		push	eax						; preserve EAX
+ 0000022E  52		     1		push	edx						; preserve EDX
+ 0000022F  8D 15 00000099 R  1		lea		edx,DEV2				; get text
+ 00000235  E8 00000000 E     1		call	WriteString				; write text
+ 0000023A  B8 00000000	     1		mov		eax,0				; get newline
+ 0000023F  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 00000242  75 05	     1		jne		??0018						; NO: no newline
+ 00000244  E8 00000000 E     1		call	Crlf					; carriage return
+ 00000249  5A		     1	??0018:	pop		edx						; restore EDX
+ 0000024A  58		     1		pop		eax						; restore EAX
+ 0000024B  8D 3D 00000000 R		lea		edi,drawing.white1
+ 00000251  8B 07			mov		eax,[edi]
+ 00000253  E8 00000000 E		call	WriteDec
+					writ	DEV4,0
+ 00000258		     1		.code
+ 00000258  50		     1		push	eax						; preserve EAX
+ 00000259  52		     1		push	edx						; preserve EDX
+ 0000025A  8D 15 000000A7 R  1		lea		edx,DEV4				; get text
+ 00000260  E8 00000000 E     1		call	WriteString				; write text
+ 00000265  B8 00000000	     1		mov		eax,0				; get newline
+ 0000026A  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 0000026D  75 05	     1		jne		??0019						; NO: no newline
+ 0000026F  E8 00000000 E     1		call	Crlf					; carriage return
+ 00000274  5A		     1	??0019:	pop		edx						; restore EDX
+ 00000275  58		     1		pop		eax						; restore EAX
+ 00000276  83 C7 04			add		edi,type sdword
+ 00000279  8B 07			mov		eax,[edi]
+ 0000027B  E8 00000000 E		call	WriteDec
+					writ	DEV4,0
+ 00000280		     1		.code
+ 00000280  50		     1		push	eax						; preserve EAX
+ 00000281  52		     1		push	edx						; preserve EDX
+ 00000282  8D 15 000000A7 R  1		lea		edx,DEV4				; get text
+ 00000288  E8 00000000 E     1		call	WriteString				; write text
+ 0000028D  B8 00000000	     1		mov		eax,0				; get newline
+ 00000292  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 00000295  75 05	     1		jne		??001A						; NO: no newline
+ 00000297  E8 00000000 E     1		call	Crlf					; carriage return
+ 0000029C  5A		     1	??001A:	pop		edx						; restore EDX
+ 0000029D  58		     1		pop		eax						; restore EAX
+ 0000029E  83 C7 04			add		edi,type sdword
+ 000002A1  8B 07			mov		eax,[edi]
+ 000002A3  E8 00000000 E		call	WriteDec
+					writ	DEV4,0
+ 000002A8		     1		.code
+ 000002A8  50		     1		push	eax						; preserve EAX
+ 000002A9  52		     1		push	edx						; preserve EDX
+ 000002AA  8D 15 000000A7 R  1		lea		edx,DEV4				; get text
+ 000002B0  E8 00000000 E     1		call	WriteString				; write text
+ 000002B5  B8 00000000	     1		mov		eax,0				; get newline
+ 000002BA  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 000002BD  75 05	     1		jne		??001B						; NO: no newline
+ 000002BF  E8 00000000 E     1		call	Crlf					; carriage return
+ 000002C4  5A		     1	??001B:	pop		edx						; restore EDX
+ 000002C5  58		     1		pop		eax						; restore EAX
+ 000002C6  83 C7 04			add		edi,type sdword
+ 000002C9  8B 07			mov		eax,[edi]
+ 000002CB  E8 00000000 E		call	WriteDec
+					writ	DEV4,0
+ 000002D0		     1		.code
+ 000002D0  50		     1		push	eax						; preserve EAX
+ 000002D1  52		     1		push	edx						; preserve EDX
+ 000002D2  8D 15 000000A7 R  1		lea		edx,DEV4				; get text
+ 000002D8  E8 00000000 E     1		call	WriteString				; write text
+ 000002DD  B8 00000000	     1		mov		eax,0				; get newline
+ 000002E2  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 000002E5  75 05	     1		jne		??001C						; NO: no newline
+ 000002E7  E8 00000000 E     1		call	Crlf					; carriage return
+ 000002EC  5A		     1	??001C:	pop		edx						; restore EDX
+ 000002ED  58		     1		pop		eax						; restore EAX
+ 000002EE  83 C7 04			add		edi,type sdword
+ 000002F1  8B 07			mov		eax,[edi]
+ 000002F3  E8 00000000 E		call	WriteDec
+ 000002F8  E8 00000000 E		call	Crlf
+ 000002FD  83 C7 04			add		edi,type sdword
+					writ	DEV3,0
+ 00000300		     1		.code
+ 00000300  50		     1		push	eax						; preserve EAX
+ 00000301  52		     1		push	edx						; preserve EDX
+ 00000302  8D 15 000000A1 R  1		lea		edx,DEV3				; get text
+ 00000308  E8 00000000 E     1		call	WriteString				; write text
+ 0000030D  B8 00000000	     1		mov		eax,0				; get newline
+ 00000312  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 00000315  75 05	     1		jne		??001D						; NO: no newline
+ 00000317  E8 00000000 E     1		call	Crlf					; carriage return
+ 0000031C  5A		     1	??001D:	pop		edx						; restore EDX
+ 0000031D  58		     1		pop		eax						; restore EAX
+ 0000031E  8B 07			mov		eax,[edi]
+ 00000320  E8 00000000 E		call	WriteDec
+ 00000325  E8 00000000 E		call	Crlf
+ 0000032A  E8 00000000 E		call	Crlf
+ 0000032F  5F				pop		edi
+ 00000330  58				pop		eax
+					; END OF SCENARIO TESTING CODE
+					getT	customer				; get customer drawing
+ 000000AA		     1		.data
+ 000000AA 50 69 63 6B 20     1		??001E 	byte "Pick five numbers between 1 and 69 for white.",0
+	   66 69 76 65 20
+	   6E 75 6D 62 65
+	   72 73 20 62 65
+	   74 77 65 65 6E
+	   20 31 20 61 6E
+	   64 20 36 39 20
+	   66 6F 72 20 77
+	   68 69 74 65 2E
+	   00
+ 000000D8 50 69 63 6B 20     1		??001F 	byte "Pick a number between 1 and 26 for red.",0
+	   61 20 6E 75 6D
+	   62 65 72 20 62
+	   65 74 77 65 65
+	   6E 20 31 20 61
+	   6E 64 20 32 36
+	   20 66 6F 72 20
+	   72 65 64 2E 00
+ 00000100 43 68 6F 69 63     1		??0020 	byte "Choice: ",0
+	   65 3A 20 00
+ 00000109 43 61 6E 27 74     1		??0021 	byte "Can't pick number outside range 1 to 69. Try again.",0
+	   20 70 69 63 6B
+	   20 6E 75 6D 62
+	   65 72 20 6F 75
+	   74 73 69 64 65
+	   20 72 61 6E 67
+	   65 20 31 20 74
+	   6F 20 36 39 2E
+	   20 54 72 79 20
+	   61 67 61 69 6E
+	   2E 00
+ 0000013D 43 61 6E 27 74     1		??0022 	byte "Can't pick number outside range 1 to 26. Try again.",0
+	   20 70 69 63 6B
+	   20 6E 75 6D 62
+	   65 72 20 6F 75
+	   74 73 69 64 65
+	   20 72 61 6E 67
+	   65 20 31 20 74
+	   6F 20 32 36 2E
+	   20 54 72 79 20
+	   61 67 61 69 6E
+	   2E 00
+ 00000171 43 61 6E 27 74     1		??0023 	byte "Can't pick duplicate numbers. Try again.",0
+	   20 70 69 63 6B
+	   20 64 75 70 6C
+	   69 63 61 74 65
+	   20 6E 75 6D 62
+	   65 72 73 2E 20
+	   54 72 79 20 61
+	   67 61 69 6E 2E
+	   00
+ 00000331		     1		.code
+ 00000331  50		     1		push 	eax						; preserve eax
+ 00000332  53		     1		push	ebx						; preserve ebx
+ 00000333  51		     1		push 	ecx						; preserve ecx
+ 00000334  52		     1		push 	edx						; preserve edx
+ 00000335  57		     1		push	edi						; preserve edi
+ 00000336  B9 00000005	     1		mov		ecx,5					; range to fill for white
+ 0000033B  8D 3D 00000018 R  1		lea		edi,customer.white1		; get initial field
+ 00000341		     2		.code
+ 00000341  50		     2		push	eax						; preserve EAX
+ 00000342  52		     2		push	edx						; preserve EDX
+ 00000343  8D 15 000000AA R  2		lea		edx,??001E				; get text
+ 00000349  E8 00000000 E     2		call	WriteString				; write text
+ 0000034E  B8 00000001	     2		mov		eax,1				; get newline
+ 00000353  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000356  75 05	     2		jne		??002A						; NO: no newline
+ 00000358  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000035D  5A		     2	??002A:	pop		edx						; restore EDX
+ 0000035E  58		     2		pop		eax						; restore EAX
+ 0000035F		     1	??0024:								; fill white loop
+ 0000035F		     2		.code
+ 0000035F  50		     2		push	eax						; preserve EAX
+ 00000360  52		     2		push	edx						; preserve EDX
+ 00000361  8D 15 00000100 R  2		lea		edx,??0020				; get text
+ 00000367  E8 00000000 E     2		call	WriteString				; write text
+ 0000036C  B8 00000000	     2		mov		eax,0				; get newline
+ 00000371  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000374  75 05	     2		jne		??002B						; NO: no newline
+ 00000376  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000037B  5A		     2	??002B:	pop		edx						; restore EDX
+ 0000037C  58		     2		pop		eax						; restore EAX
+ 0000037D  E8 00000000 E     1		call	ReadInt					; user input into EAX
+ 00000382  83 F8 45	     1		cmp		eax,69					; 69 - user input
+ 00000385  77 53	     1		ja		??0027				; user input too large
+ 00000387  83 F8 00	     1		cmp		eax,0					; 0 - user input
+ 0000038A  76 4E	     1		jbe		??0027				; user input too small
+ 0000038C  8B D8	     1		mov		ebx,eax					; prep for dup check
+ 0000038E		     2		.code
+ 0000038E  57		     2		push	edi
+ 0000038F  8D 3D 00000018 R  2		lea		edi,customer.white1		; get initial field
+ 00000395  3B 1F	     2		cmp		ebx,[edi]				; checking equality
+ 00000397  74 23	     2		je		??002D					; is duplicate?
+ 00000399  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 0000039C  3B 1F	     2		cmp		ebx,[edi]				; checking equality
+ 0000039E  74 1C	     2		je		??002D					; is duplicate?
+ 000003A0  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000003A3  3B 1F	     2		cmp		ebx,[edi]				; checking equality
+ 000003A5  74 15	     2		je		??002D					; is duplicate?
+ 000003A7  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000003AA  3B 1F	     2		cmp		ebx,[edi]				; checking equality
+ 000003AC  74 0E	     2		je		??002D					; is duplicate?
+ 000003AE  83 C7 04	     2		add		edi,type sdword			; get next byte field
+ 000003B1  3B 1F	     2		cmp		ebx,[edi]				; checking equality
+ 000003B3  74 07	     2		je		??002D					; is duplicate?
+ 000003B5		     2	??002C:
+ 000003B5  BA 00000000	     2		mov		edx,0					; no duplicates
+ 000003BA  EB 05	     2		jmp		??002E					; exit macro
+ 000003BC		     2	??002D:
+ 000003BC  BA 00000001	     2		mov		edx,1					; found duplicate
+ 000003C1		     2	??002E:
+ 000003C1  5F		     2		pop		edi
+ 000003C2  83 FA 01	     1		cmp		edx,1					; EDX contains status code
+ 000003C5  74 36	     1		je		??0028				; if 1 = EDX, duplicate user input detected
+ 000003C7  BA 00000000	     1		mov		edx,0					; if 1 != EDX, clear EDX and continue
+ 000003CC  89 07	     1		mov		[edi],eax				; set current field
+ 000003CE  83 C7 04	     1		add		edi,type sdword			; get next byte field
+ 000003D1  B8 00000000	     1		mov		eax,0
+ 000003D6  E2 87	     1		loop	??0024					; loop for white ball
+ 000003D8  EB 4B	     1		jmp		??0025					; go to red ball label
+ 000003DA		     1	??0027:							; white ball out of range
+ 000003DA		     2		.code
+ 000003DA  50		     2		push	eax						; preserve EAX
+ 000003DB  52		     2		push	edx						; preserve EDX
+ 000003DC  8D 15 00000109 R  2		lea		edx,??0021				; get text
+ 000003E2  E8 00000000 E     2		call	WriteString				; write text
+ 000003E7  B8 00000001	     2		mov		eax,1				; get newline
+ 000003EC  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000003EF  75 05	     2		jne		??002F						; NO: no newline
+ 000003F1  E8 00000000 E     2		call	Crlf					; carriage return
+ 000003F6  5A		     2	??002F:	pop		edx						; restore EDX
+ 000003F7  58		     2		pop		eax						; restore EAX
+ 000003F8  E9 FFFFFF62	     1		jmp		??0024					; return to top of loop without dec ECX
+ 000003FD		     1	??0028:							; white ball out of range
+ 000003FD		     2		.code
+ 000003FD  50		     2		push	eax						; preserve EAX
+ 000003FE  52		     2		push	edx						; preserve EDX
+ 000003FF  8D 15 00000171 R  2		lea		edx,??0023				; get text
+ 00000405  E8 00000000 E     2		call	WriteString				; write text
+ 0000040A  B8 00000001	     2		mov		eax,1				; get newline
+ 0000040F  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000412  75 05	     2		jne		??0030						; NO: no newline
+ 00000414  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000419  5A		     2	??0030:	pop		edx						; restore EDX
+ 0000041A  58		     2		pop		eax						; restore EAX
+ 0000041B  BA 00000000	     1		mov		edx,0
+ 00000420  E9 FFFFFF3A	     1		jmp		??0024					; return to top of loop without dec ECX
+ 00000425		     1	??0025:								; set red label
+ 00000425		     2		.code
+ 00000425  50		     2		push	eax						; preserve EAX
+ 00000426  52		     2		push	edx						; preserve EDX
+ 00000427  8D 15 000000D8 R  2		lea		edx,??001F				; get text
+ 0000042D  E8 00000000 E     2		call	WriteString				; write text
+ 00000432  B8 00000001	     2		mov		eax,1				; get newline
+ 00000437  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000043A  75 05	     2		jne		??0031						; NO: no newline
+ 0000043C  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000441  5A		     2	??0031:	pop		edx						; restore EDX
+ 00000442  58		     2		pop		eax						; restore EAX
+ 00000443		     2		.code
+ 00000443  50		     2		push	eax						; preserve EAX
+ 00000444  52		     2		push	edx						; preserve EDX
+ 00000445  8D 15 00000100 R  2		lea		edx,??0020				; get text
+ 0000044B  E8 00000000 E     2		call	WriteString				; write text
+ 00000450  B8 00000000	     2		mov		eax,0				; get newline
+ 00000455  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000458  75 05	     2		jne		??0032						; NO: no newline
+ 0000045A  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000045F  5A		     2	??0032:	pop		edx						; restore EDX
+ 00000460  58		     2		pop		eax						; restore EAX
+ 00000461  E8 00000000 E     1		call	ReadInt					; user input into EAX
+ 00000466  83 F8 1A	     1		cmp		eax,26					; 26 - user input
+ 00000469  77 09	     1		ja		??0029				; user input too large
+ 0000046B  83 F8 00	     1		cmp		eax,0					; 0 - user input
+ 0000046E  76 04	     1		jbe		??0029				; user input too small
+ 00000470  89 07	     1		mov		[edi],eax				; set current field
+ 00000472  EB 20	     1		jmp		??0026					; finished
+ 00000474		     1	??0029:
+ 00000474		     2		.code
+ 00000474  50		     2		push	eax						; preserve EAX
+ 00000475  52		     2		push	edx						; preserve EDX
+ 00000476  8D 15 0000013D R  2		lea		edx,??0022				; get text
+ 0000047C  E8 00000000 E     2		call	WriteString				; write text
+ 00000481  B8 00000001	     2		mov		eax,1				; get newline
+ 00000486  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000489  75 05	     2		jne		??0033						; NO: no newline
+ 0000048B  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000490  5A		     2	??0033:	pop		edx						; restore EDX
+ 00000491  58		     2		pop		eax						; restore EAX
+ 00000492  EB 91	     1		jmp		??0025					; retry
+ 00000494		     1	??0026:								; completion label
+ 00000494  5F		     1		pop		edi						; restore edi
+ 00000495  5A		     1		pop 	edx						; restore edx
+ 00000496  59		     1		pop 	ecx						; restore ecx
+ 00000497  5B		     1		pop		ebx						; restore ebx
+ 00000498  58		     1		pop 	eax						; restore eax
+					detWin	drawing, customer		; determine winning status
+ 0000019A		     1		.data
+ 0000019A 00		     1		??0034	byte 0
+ 0000019B 00		     1		??0035	byte 0
+ 0000019C 50 4F 57 45 52     1		??0036	byte "POWERBALL DRAWING RESULTS",0
+	   42 41 4C 4C 20
+	   44 52 41 57 49
+	   4E 47 20 52 45
+	   53 55 4C 54 53
+	   00
+ 000001B6 57 68 69 74 65     1		??0037	byte "White: ",0
+	   3A 20 00
+ 000001BE 52 65 64 3A 20     1		??0038	byte "Red: ",0
+	   00
+ 000001C4 59 6F 75 20 6D     1		??0039	byte "You matched ",0
+	   61 74 63 68 65
+	   64 20 00
+ 000001D1 20 77 68 69 74     1		??003A	byte " white balls and ",0
+	   65 20 62 61 6C
+	   6C 73 20 61 6E
+	   64 20 00
+ 000001E3 20 72 65 64 20     1		??003B	byte " red balls.",0
+	   62 61 6C 6C 73
+	   2E 00
+ 000001EF 59 6F 75 20 77     1		??003C	byte "You won ",0
+	   6F 6E 20 00
+ 000001F8 24 34 21 00	     1		??003D	byte "$4!",0
+ 000001FC 24 37 21 00	     1		??003E	byte "$7!",0
+ 00000200 24 31 30 30 21     1		??003F	byte "$100!",0
+	   00
+ 00000206 24 35 30 2C 30     1		??0040	byte "$50,000!",0
+	   30 30 21 00
+ 0000020F 24 31 20 6D 69     1		??0041	byte "$1 million!",0
+	   6C 6C 69 6F 6E
+	   21 00
+ 0000021B 74 68 65 20 47     1		??0042	byte "the Grand Prize!",0
+	   72 61 6E 64 20
+	   50 72 69 7A 65
+	   21 00
+ 0000022C 59 6F 75 20 6C     1		??0043	byte "You lost. Better luck next time.",0
+	   6F 73 74 2E 20
+	   42 65 74 74 65
+	   72 20 6C 75 63
+	   6B 20 6E 65 78
+	   74 20 74 69 6D
+	   65 2E 00
+ 0000024D 2C 20 00	     1		??0044		byte ", ",0
+ 00000499		     1		.code
+ 00000499  50		     1		push	eax						; preserve EAX
+ 0000049A  51		     1		push	ecx						; preserve ECX
+ 0000049B  57		     1		push	edi						; preserve EDI
+ 0000049C  56		     1		push	esi						; preserve ESI
+ 0000049D  8D 3D 00000000 R  1		lea		edi,drawing.white1		; get first field
+ 000004A3  8D 35 00000018 R  1		lea		esi,customer.white1		; get first field
+ 000004A9  B9 00000005	     1		mov		ecx,5					; range of white
+ 000004AE		     1	??0045:
+ 000004AE  51		     1		push	ecx						; preserve outer loop
+ 000004AF  B9 00000005	     1		mov		ecx,5					; set inner loop range
+ 000004B4		     1	??0046:
+ 000004B4  8B 06	     1		mov		eax,[esi]				; get customer field
+ 000004B6  3B 07	     1		cmp		eax,[edi]				; official = customer ?
+ 000004B8  75 06	     1		jne		??0047					; NO
+ 000004BA  FE 05 0000019A R  1		inc		??0034					; YES
+ 000004C0		     1	??0047:
+ 000004C0  83 C6 04	     1		add		esi,type sdword			; get next customer white
+ 000004C3  E2 EF	     1		loop	??0046					; continue white checks
+ 000004C5  59		     1		pop		ecx						; restore outer loop
+ 000004C6  83 C7 04	     1		add		edi,type sdword			; get next official white
+ 000004C9  8D 35 00000018 R  1		lea		esi,customer.white1		; get first field again
+ 000004CF  E2 DD	     1		loop	??0045
+ 000004D1  8D 3D 00000014 R  1		lea		edi,drawing.red		; get official red
+ 000004D7  8D 35 0000002C R  1		lea		esi,customer.red		; get customer red
+ 000004DD  8B 06	     1		mov		eax,[esi]				; get customer red
+ 000004DF  3B 07	     1		cmp		eax,[edi]				; official red = customer red ?
+ 000004E1  75 06	     1		jne		??0048					; NO
+ 000004E3  FE 05 0000019B R  1		inc		??0035					; YES
+ 000004E9		     1	??0048:
+ 000004E9		     2		.code
+ 000004E9  50		     2		push	eax						; preserve EAX
+ 000004EA  52		     2		push	edx						; preserve EDX
+ 000004EB  8D 15 0000019C R  2		lea		edx,??0036				; get text
+ 000004F1  E8 00000000 E     2		call	WriteString				; write text
+ 000004F6  B8 00000001	     2		mov		eax,1				; get newline
+ 000004FB  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000004FE  75 05	     2		jne		??0056						; NO: no newline
+ 00000500  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000505  5A		     2	??0056:	pop		edx						; restore EDX
+ 00000506  58		     2		pop		eax						; restore EAX
+ 00000507		     2		.code
+ 00000507  50		     2		push	eax						; preserve EAX
+ 00000508  52		     2		push	edx						; preserve EDX
+ 00000509  8D 15 000001B6 R  2		lea		edx,??0037				; get text
+ 0000050F  E8 00000000 E     2		call	WriteString				; write text
+ 00000514  B8 00000000	     2		mov		eax,0				; get newline
+ 00000519  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000051C  75 05	     2		jne		??0057						; NO: no newline
+ 0000051E  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000523  5A		     2	??0057:	pop		edx						; restore EDX
+ 00000524  58		     2		pop		eax						; restore EAX
+ 00000525  8D 3D 00000000 R  1		lea		edi,drawing.white1		; get field
+ 0000052B  8B 07	     1		mov		eax,[edi]				; get value
+ 0000052D  E8 00000000 E     1		call	WriteDec				; print value
+ 00000532		     2		.code
+ 00000532  50		     2		push	eax						; preserve EAX
+ 00000533  52		     2		push	edx						; preserve EDX
+ 00000534  8D 15 0000024D R  2		lea		edx,??0044				; get text
+ 0000053A  E8 00000000 E     2		call	WriteString				; write text
+ 0000053F  B8 00000000	     2		mov		eax,0				; get newline
+ 00000544  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000547  75 05	     2		jne		??0058						; NO: no newline
+ 00000549  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000054E  5A		     2	??0058:	pop		edx						; restore EDX
+ 0000054F  58		     2		pop		eax						; restore EAX
+ 00000550  83 C7 04	     1		add		edi,type sdword			; get next official
+ 00000553  8B 07	     1		mov		eax,[edi]				; get value
+ 00000555  E8 00000000 E     1		call	WriteDec				; print value
+ 0000055A		     2		.code
+ 0000055A  50		     2		push	eax						; preserve EAX
+ 0000055B  52		     2		push	edx						; preserve EDX
+ 0000055C  8D 15 0000024D R  2		lea		edx,??0044				; get text
+ 00000562  E8 00000000 E     2		call	WriteString				; write text
+ 00000567  B8 00000000	     2		mov		eax,0				; get newline
+ 0000056C  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000056F  75 05	     2		jne		??0059						; NO: no newline
+ 00000571  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000576  5A		     2	??0059:	pop		edx						; restore EDX
+ 00000577  58		     2		pop		eax						; restore EAX
+ 00000578  83 C7 04	     1		add		edi,type sdword			; get next official
+ 0000057B  8B 07	     1		mov		eax,[edi]				; get value
+ 0000057D  E8 00000000 E     1		call	WriteDec				; print value
+ 00000582		     2		.code
+ 00000582  50		     2		push	eax						; preserve EAX
+ 00000583  52		     2		push	edx						; preserve EDX
+ 00000584  8D 15 0000024D R  2		lea		edx,??0044				; get text
+ 0000058A  E8 00000000 E     2		call	WriteString				; write text
+ 0000058F  B8 00000000	     2		mov		eax,0				; get newline
+ 00000594  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000597  75 05	     2		jne		??005A						; NO: no newline
+ 00000599  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000059E  5A		     2	??005A:	pop		edx						; restore EDX
+ 0000059F  58		     2		pop		eax						; restore EAX
+ 000005A0  83 C7 04	     1		add		edi,type sdword			; get next official
+ 000005A3  8B 07	     1		mov		eax,[edi]				; get value
+ 000005A5  E8 00000000 E     1		call	WriteDec				; print value
+ 000005AA		     2		.code
+ 000005AA  50		     2		push	eax						; preserve EAX
+ 000005AB  52		     2		push	edx						; preserve EDX
+ 000005AC  8D 15 0000024D R  2		lea		edx,??0044				; get text
+ 000005B2  E8 00000000 E     2		call	WriteString				; write text
+ 000005B7  B8 00000000	     2		mov		eax,0				; get newline
+ 000005BC  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000005BF  75 05	     2		jne		??005B						; NO: no newline
+ 000005C1  E8 00000000 E     2		call	Crlf					; carriage return
+ 000005C6  5A		     2	??005B:	pop		edx						; restore EDX
+ 000005C7  58		     2		pop		eax						; restore EAX
+ 000005C8  83 C7 04	     1		add		edi,type sdword			; get next official
+ 000005CB  8B 07	     1		mov		eax,[edi]				; get value
+ 000005CD  E8 00000000 E     1		call	WriteDec				; print value
+ 000005D2  83 C7 04	     1		add		edi,type sdword			; get next official
+ 000005D5  E8 00000000 E     1		call	Crlf					; carriage return
+ 000005DA		     2		.code
+ 000005DA  50		     2		push	eax						; preserve EAX
+ 000005DB  52		     2		push	edx						; preserve EDX
+ 000005DC  8D 15 000001BE R  2		lea		edx,??0038				; get text
+ 000005E2  E8 00000000 E     2		call	WriteString				; write text
+ 000005E7  B8 00000000	     2		mov		eax,0				; get newline
+ 000005EC  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000005EF  75 05	     2		jne		??005C						; NO: no newline
+ 000005F1  E8 00000000 E     2		call	Crlf					; carriage return
+ 000005F6  5A		     2	??005C:	pop		edx						; restore EDX
+ 000005F7  58		     2		pop		eax						; restore EAX
+ 000005F8  8B 07	     1		mov		eax,[edi]				; get value
+ 000005FA  E8 00000000 E     1		call	WriteDec				; print value
+ 000005FF  E8 00000000 E     1		call	Crlf					; carriage return
+ 00000604		     2		.code
+ 00000604  50		     2		push	eax						; preserve EAX
+ 00000605  52		     2		push	edx						; preserve EDX
+ 00000606  8D 15 000001C4 R  2		lea		edx,??0039				; get text
+ 0000060C  E8 00000000 E     2		call	WriteString				; write text
+ 00000611  B8 00000000	     2		mov		eax,0				; get newline
+ 00000616  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000619  75 05	     2		jne		??005D						; NO: no newline
+ 0000061B  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000620  5A		     2	??005D:	pop		edx						; restore EDX
+ 00000621  58		     2		pop		eax						; restore EAX
+ 00000622  0F B6 05	     1		movzx	eax,??0034				; get value
+	   0000019A R
+ 00000629  E8 00000000 E     1		call	WriteDec				; print value
+ 0000062E		     2		.code
+ 0000062E  50		     2		push	eax						; preserve EAX
+ 0000062F  52		     2		push	edx						; preserve EDX
+ 00000630  8D 15 000001D1 R  2		lea		edx,??003A				; get text
+ 00000636  E8 00000000 E     2		call	WriteString				; write text
+ 0000063B  B8 00000000	     2		mov		eax,0				; get newline
+ 00000640  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000643  75 05	     2		jne		??005E						; NO: no newline
+ 00000645  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000064A  5A		     2	??005E:	pop		edx						; restore EDX
+ 0000064B  58		     2		pop		eax						; restore EAX
+ 0000064C  0F B6 05	     1		movzx	eax,??0035				; get value
+	   0000019B R
+ 00000653  E8 00000000 E     1		call	WriteDec				; print value
+ 00000658		     2		.code
+ 00000658  50		     2		push	eax						; preserve EAX
+ 00000659  52		     2		push	edx						; preserve EDX
+ 0000065A  8D 15 000001E3 R  2		lea		edx,??003B				; get text
+ 00000660  E8 00000000 E     2		call	WriteString				; write text
+ 00000665  B8 00000001	     2		mov		eax,1				; get newline
+ 0000066A  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000066D  75 05	     2		jne		??005F						; NO: no newline
+ 0000066F  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000674  5A		     2	??005F:	pop		edx						; restore EDX
+ 00000675  58		     2		pop		eax						; restore EAX
+ 00000676  0F B6 05	     1		movzx	eax,??0034				; get white count
+	   0000019A R
+ 0000067D  80 3D 0000019B R  1		cmp		??0035,1					; 1 = red ?
+	   01
+ 00000684  0F 85 000001A8    1		jne		??004A						; NO
+ 0000068A		     1	??0049: ; red1 1
+ 0000068A		     1	??004B: ; white 0
+ 0000068A  83 F8 00	     1		cmp		eax,0					; check equality
+ 0000068D  75 41	     1		jne		??004C						; NO
+ 0000068F		     2		.code
+ 0000068F  50		     2		push	eax						; preserve EAX
+ 00000690  52		     2		push	edx						; preserve EDX
+ 00000691  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 00000697  E8 00000000 E     2		call	WriteString				; write text
+ 0000069C  B8 00000000	     2		mov		eax,0				; get newline
+ 000006A1  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000006A4  75 05	     2		jne		??0060						; NO: no newline
+ 000006A6  E8 00000000 E     2		call	Crlf					; carriage return
+ 000006AB  5A		     2	??0060:	pop		edx						; restore EDX
+ 000006AC  58		     2		pop		eax						; restore EAX
+ 000006AD		     2		.code
+ 000006AD  50		     2		push	eax						; preserve EAX
+ 000006AE  52		     2		push	edx						; preserve EDX
+ 000006AF  8D 15 000001F8 R  2		lea		edx,??003D				; get text
+ 000006B5  E8 00000000 E     2		call	WriteString				; write text
+ 000006BA  B8 00000001	     2		mov		eax,1				; get newline
+ 000006BF  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000006C2  75 05	     2		jne		??0061						; NO: no newline
+ 000006C4  E8 00000000 E     2		call	Crlf					; carriage return
+ 000006C9  5A		     2	??0061:	pop		edx						; restore EDX
+ 000006CA  58		     2		pop		eax						; restore EAX
+ 000006CB  E9 0000024C	     1		jmp		??0054						; finish
+ 000006D0		     1	??004C: ; white 1
+ 000006D0  83 F8 01	     1		cmp		eax,1					; check equality
+ 000006D3  75 41	     1		jne		??004D						; NO
+ 000006D5		     2		.code
+ 000006D5  50		     2		push	eax						; preserve EAX
+ 000006D6  52		     2		push	edx						; preserve EDX
+ 000006D7  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 000006DD  E8 00000000 E     2		call	WriteString				; write text
+ 000006E2  B8 00000000	     2		mov		eax,0				; get newline
+ 000006E7  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000006EA  75 05	     2		jne		??0062						; NO: no newline
+ 000006EC  E8 00000000 E     2		call	Crlf					; carriage return
+ 000006F1  5A		     2	??0062:	pop		edx						; restore EDX
+ 000006F2  58		     2		pop		eax						; restore EAX
+ 000006F3		     2		.code
+ 000006F3  50		     2		push	eax						; preserve EAX
+ 000006F4  52		     2		push	edx						; preserve EDX
+ 000006F5  8D 15 000001F8 R  2		lea		edx,??003D				; get text
+ 000006FB  E8 00000000 E     2		call	WriteString				; write text
+ 00000700  B8 00000001	     2		mov		eax,1				; get newline
+ 00000705  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000708  75 05	     2		jne		??0063						; NO: no newline
+ 0000070A  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000070F  5A		     2	??0063:	pop		edx						; restore EDX
+ 00000710  58		     2		pop		eax						; restore EAX
+ 00000711  E9 00000206	     1		jmp		??0054						; finish
+ 00000716		     1	??004D: ; white 2
+ 00000716  83 F8 02	     1		cmp		eax,2					; check equality
+ 00000719  75 41	     1		jne		??004E						; NO
+ 0000071B		     2		.code
+ 0000071B  50		     2		push	eax						; preserve EAX
+ 0000071C  52		     2		push	edx						; preserve EDX
+ 0000071D  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 00000723  E8 00000000 E     2		call	WriteString				; write text
+ 00000728  B8 00000000	     2		mov		eax,0				; get newline
+ 0000072D  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000730  75 05	     2		jne		??0064						; NO: no newline
+ 00000732  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000737  5A		     2	??0064:	pop		edx						; restore EDX
+ 00000738  58		     2		pop		eax						; restore EAX
+ 00000739		     2		.code
+ 00000739  50		     2		push	eax						; preserve EAX
+ 0000073A  52		     2		push	edx						; preserve EDX
+ 0000073B  8D 15 000001FC R  2		lea		edx,??003E				; get text
+ 00000741  E8 00000000 E     2		call	WriteString				; write text
+ 00000746  B8 00000001	     2		mov		eax,1				; get newline
+ 0000074B  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000074E  75 05	     2		jne		??0065						; NO: no newline
+ 00000750  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000755  5A		     2	??0065:	pop		edx						; restore EDX
+ 00000756  58		     2		pop		eax						; restore EAX
+ 00000757  E9 000001C0	     1		jmp		??0054						; finish
+ 0000075C		     1	??004E: ; white 3
+ 0000075C  83 F8 03	     1		cmp		eax,3					; check equality
+ 0000075F  75 41	     1		jne		??004F						; NO
+ 00000761		     2		.code
+ 00000761  50		     2		push	eax						; preserve EAX
+ 00000762  52		     2		push	edx						; preserve EDX
+ 00000763  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 00000769  E8 00000000 E     2		call	WriteString				; write text
+ 0000076E  B8 00000000	     2		mov		eax,0				; get newline
+ 00000773  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000776  75 05	     2		jne		??0066						; NO: no newline
+ 00000778  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000077D  5A		     2	??0066:	pop		edx						; restore EDX
+ 0000077E  58		     2		pop		eax						; restore EAX
+ 0000077F		     2		.code
+ 0000077F  50		     2		push	eax						; preserve EAX
+ 00000780  52		     2		push	edx						; preserve EDX
+ 00000781  8D 15 00000200 R  2		lea		edx,??003F				; get text
+ 00000787  E8 00000000 E     2		call	WriteString				; write text
+ 0000078C  B8 00000001	     2		mov		eax,1				; get newline
+ 00000791  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000794  75 05	     2		jne		??0067						; NO: no newline
+ 00000796  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000079B  5A		     2	??0067:	pop		edx						; restore EDX
+ 0000079C  58		     2		pop		eax						; restore EAX
+ 0000079D  E9 0000017A	     1		jmp		??0054						; finish
+ 000007A2		     1	??004F: ; white 4
+ 000007A2  83 F8 04	     1		cmp		eax,4					; check equality
+ 000007A5  75 41	     1		jne		??0050						; NO
+ 000007A7		     2		.code
+ 000007A7  50		     2		push	eax						; preserve EAX
+ 000007A8  52		     2		push	edx						; preserve EDX
+ 000007A9  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 000007AF  E8 00000000 E     2		call	WriteString				; write text
+ 000007B4  B8 00000000	     2		mov		eax,0				; get newline
+ 000007B9  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000007BC  75 05	     2		jne		??0068						; NO: no newline
+ 000007BE  E8 00000000 E     2		call	Crlf					; carriage return
+ 000007C3  5A		     2	??0068:	pop		edx						; restore EDX
+ 000007C4  58		     2		pop		eax						; restore EAX
+ 000007C5		     2		.code
+ 000007C5  50		     2		push	eax						; preserve EAX
+ 000007C6  52		     2		push	edx						; preserve EDX
+ 000007C7  8D 15 00000206 R  2		lea		edx,??0040				; get text
+ 000007CD  E8 00000000 E     2		call	WriteString				; write text
+ 000007D2  B8 00000001	     2		mov		eax,1				; get newline
+ 000007D7  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000007DA  75 05	     2		jne		??0069						; NO: no newline
+ 000007DC  E8 00000000 E     2		call	Crlf					; carriage return
+ 000007E1  5A		     2	??0069:	pop		edx						; restore EDX
+ 000007E2  58		     2		pop		eax						; restore EAX
+ 000007E3  E9 00000134	     1		jmp		??0054						; finish
+ 000007E8		     1	??0050: ; white 5
+ 000007E8  83 F8 05	     1		cmp		eax,5					; check equality
+ 000007EB  0F 85 0000010D    1		jne		??0055						; NO
+ 000007F1		     2		.code
+ 000007F1  50		     2		push	eax						; preserve EAX
+ 000007F2  52		     2		push	edx						; preserve EDX
+ 000007F3  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 000007F9  E8 00000000 E     2		call	WriteString				; write text
+ 000007FE  B8 00000000	     2		mov		eax,0				; get newline
+ 00000803  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000806  75 05	     2		jne		??006A						; NO: no newline
+ 00000808  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000080D  5A		     2	??006A:	pop		edx						; restore EDX
+ 0000080E  58		     2		pop		eax						; restore EAX
+ 0000080F		     2		.code
+ 0000080F  50		     2		push	eax						; preserve EAX
+ 00000810  52		     2		push	edx						; preserve EDX
+ 00000811  8D 15 0000021B R  2		lea		edx,??0042				; get text
+ 00000817  E8 00000000 E     2		call	WriteString				; write text
+ 0000081C  B8 00000001	     2		mov		eax,1				; get newline
+ 00000821  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000824  75 05	     2		jne		??006B						; NO: no newline
+ 00000826  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000082B  5A		     2	??006B:	pop		edx						; restore EDX
+ 0000082C  58		     2		pop		eax						; restore EAX
+ 0000082D  E9 000000EA	     1		jmp		??0054						; finish
+ 00000832		     1	??004A: ; red1 0
+ 00000832		     1	??0051: ; white 3
+ 00000832  83 F8 03	     1		cmp		eax,3					; check equality
+ 00000835  75 41	     1		jne		??0052						; NO
+ 00000837		     2		.code
+ 00000837  50		     2		push	eax						; preserve EAX
+ 00000838  52		     2		push	edx						; preserve EDX
+ 00000839  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 0000083F  E8 00000000 E     2		call	WriteString				; write text
+ 00000844  B8 00000000	     2		mov		eax,0				; get newline
+ 00000849  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000084C  75 05	     2		jne		??006C						; NO: no newline
+ 0000084E  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000853  5A		     2	??006C:	pop		edx						; restore EDX
+ 00000854  58		     2		pop		eax						; restore EAX
+ 00000855		     2		.code
+ 00000855  50		     2		push	eax						; preserve EAX
+ 00000856  52		     2		push	edx						; preserve EDX
+ 00000857  8D 15 000001FC R  2		lea		edx,??003E				; get text
+ 0000085D  E8 00000000 E     2		call	WriteString				; write text
+ 00000862  B8 00000001	     2		mov		eax,1				; get newline
+ 00000867  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 0000086A  75 05	     2		jne		??006D						; NO: no newline
+ 0000086C  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000871  5A		     2	??006D:	pop		edx						; restore EDX
+ 00000872  58		     2		pop		eax						; restore EAX
+ 00000873  E9 000000A4	     1		jmp		??0054						; finish
+ 00000878		     1	??0052: ; white 4
+ 00000878  83 F8 04	     1		cmp		eax,4					; check equality
+ 0000087B  75 3E	     1		jne		??0053						; NO
+ 0000087D		     2		.code
+ 0000087D  50		     2		push	eax						; preserve EAX
+ 0000087E  52		     2		push	edx						; preserve EDX
+ 0000087F  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 00000885  E8 00000000 E     2		call	WriteString				; write text
+ 0000088A  B8 00000000	     2		mov		eax,0				; get newline
+ 0000088F  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000892  75 05	     2		jne		??006E						; NO: no newline
+ 00000894  E8 00000000 E     2		call	Crlf					; carriage return
+ 00000899  5A		     2	??006E:	pop		edx						; restore EDX
+ 0000089A  58		     2		pop		eax						; restore EAX
+ 0000089B		     2		.code
+ 0000089B  50		     2		push	eax						; preserve EAX
+ 0000089C  52		     2		push	edx						; preserve EDX
+ 0000089D  8D 15 00000200 R  2		lea		edx,??003F				; get text
+ 000008A3  E8 00000000 E     2		call	WriteString				; write text
+ 000008A8  B8 00000001	     2		mov		eax,1				; get newline
+ 000008AD  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000008B0  75 05	     2		jne		??006F						; NO: no newline
+ 000008B2  E8 00000000 E     2		call	Crlf					; carriage return
+ 000008B7  5A		     2	??006F:	pop		edx						; restore EDX
+ 000008B8  58		     2		pop		eax						; restore EAX
+ 000008B9  EB 61	     1		jmp		??0054						; finish
+ 000008BB		     1	??0053: ; white 5
+ 000008BB  83 F8 05	     1		cmp		eax,5					; check equality
+ 000008BE  75 3E	     1		jne		??0055						; NO
+ 000008C0		     2		.code
+ 000008C0  50		     2		push	eax						; preserve EAX
+ 000008C1  52		     2		push	edx						; preserve EDX
+ 000008C2  8D 15 000001EF R  2		lea		edx,??003C				; get text
+ 000008C8  E8 00000000 E     2		call	WriteString				; write text
+ 000008CD  B8 00000000	     2		mov		eax,0				; get newline
+ 000008D2  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000008D5  75 05	     2		jne		??0070						; NO: no newline
+ 000008D7  E8 00000000 E     2		call	Crlf					; carriage return
+ 000008DC  5A		     2	??0070:	pop		edx						; restore EDX
+ 000008DD  58		     2		pop		eax						; restore EAX
+ 000008DE		     2		.code
+ 000008DE  50		     2		push	eax						; preserve EAX
+ 000008DF  52		     2		push	edx						; preserve EDX
+ 000008E0  8D 15 0000020F R  2		lea		edx,??0041				; get text
+ 000008E6  E8 00000000 E     2		call	WriteString				; write text
+ 000008EB  B8 00000001	     2		mov		eax,1				; get newline
+ 000008F0  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 000008F3  75 05	     2		jne		??0071						; NO: no newline
+ 000008F5  E8 00000000 E     2		call	Crlf					; carriage return
+ 000008FA  5A		     2	??0071:	pop		edx						; restore EDX
+ 000008FB  58		     2		pop		eax						; restore EAX
+ 000008FC  EB 1E	     1		jmp		??0054						; finish
+ 000008FE		     1	??0055: ; total loss
+ 000008FE		     2		.code
+ 000008FE  50		     2		push	eax						; preserve EAX
+ 000008FF  52		     2		push	edx						; preserve EDX
+ 00000900  8D 15 0000022C R  2		lea		edx,??0043				; get text
+ 00000906  E8 00000000 E     2		call	WriteString				; write text
+ 0000090B  B8 00000001	     2		mov		eax,1				; get newline
+ 00000910  83 F8 01	     2		cmp		eax,1					; 1 = newline ?
+ 00000913  75 05	     2		jne		??0072						; NO: no newline
+ 00000915  E8 00000000 E     2		call	Crlf					; carriage return
+ 0000091A  5A		     2	??0072:	pop		edx						; restore EDX
+ 0000091B  58		     2		pop		eax						; restore EAX
+ 0000091C		     1	??0054: ; finish label
+ 0000091C  E8 00000000 E     1		call	Crlf					; carriage return
+ 00000921  C6 05 0000019A R  1		mov		??0034,0					; zero out white count
+	   00
+ 00000928  C6 05 0000019B R  1		mov		??0035,0					; zero out red
+	   00
+ 0000092F  5E		     1		pop		esi						; restore ESI
+ 00000930  5F		     1		pop		edi						; restore EDI
+ 00000931  59		     1		pop		ecx						; restore ECX
+ 00000932  58		     1		pop		eax						; restore EAX
+					reset	drawing					; clear fields
+ 00000933		     1		.code
+ 00000933  50		     1		push	eax						; preserve EAX
+ 00000934  57		     1		push	edi						; preserve EDI
+ 00000935  B8 00000000	     1		mov		eax,0					; get zero
+ 0000093A  8D 3D 00000000 R  1		lea		edi,drawing.white1		; get initial field
+ 00000940  89 07	     1		mov		[edi],eax				; zero out field
+ 00000942  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000945  89 07	     1		mov		[edi],eax				; zero out field
+ 00000947  83 C7 04	     1		add		edi,type sdword			; get next field
+ 0000094A  89 07	     1		mov		[edi],eax				; zero out field
+ 0000094C  83 C7 04	     1		add		edi,type sdword			; get next field
+ 0000094F  89 07	     1		mov		[edi],eax				; zero out field
+ 00000951  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000954  89 07	     1		mov		[edi],eax				; zero out field
+ 00000956  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000959  89 07	     1		mov		[edi],eax				; zero out field
+ 0000095B  5F		     1		pop		edi						; restore EDI
+ 0000095C  58		     1		pop		eax						; restore EAX
+					reset	customer				; clear fields
+ 0000095D		     1		.code
+ 0000095D  50		     1		push	eax						; preserve EAX
+ 0000095E  57		     1		push	edi						; preserve EDI
+ 0000095F  B8 00000000	     1		mov		eax,0					; get zero
+ 00000964  8D 3D 00000018 R  1		lea		edi,customer.white1		; get initial field
+ 0000096A  89 07	     1		mov		[edi],eax				; zero out field
+ 0000096C  83 C7 04	     1		add		edi,type sdword			; get next field
+ 0000096F  89 07	     1		mov		[edi],eax				; zero out field
+ 00000971  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000974  89 07	     1		mov		[edi],eax				; zero out field
+ 00000976  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000979  89 07	     1		mov		[edi],eax				; zero out field
+ 0000097B  83 C7 04	     1		add		edi,type sdword			; get next field
+ 0000097E  89 07	     1		mov		[edi],eax				; zero out field
+ 00000980  83 C7 04	     1		add		edi,type sdword			; get next field
+ 00000983  89 07	     1		mov		[edi],eax				; zero out field
+ 00000985  5F		     1		pop		edi						; restore EDI
+ 00000986  58		     1		pop		eax						; restore EAX
+ 00000987  E9 FFFFF674			jmp		L1						; continue game
+ 0000098C			L2: writ	oops,1					; print text
+ 0000098C		     1		.code
+ 0000098C  50		     1		push	eax						; preserve EAX
+ 0000098D  52		     1		push	edx						; preserve EDX
+ 0000098E  8D 15 00000057 R  1		lea		edx,oops				; get text
+ 00000994  E8 00000000 E     1		call	WriteString				; write text
+ 00000999  B8 00000001	     1		mov		eax,1				; get newline
+ 0000099E  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 000009A1  75 05	     1		jne		??0073						; NO: no newline
+ 000009A3  E8 00000000 E     1		call	Crlf					; carriage return
+ 000009A8  5A		     1	??0073:	pop		edx						; restore EDX
+ 000009A9  58		     1		pop		eax						; restore EAX
+ 000009AA  E9 FFFFF651			jmp		L1						; continue game
+ 000009AF			L3: writ	bye,1					; print text
+ 000009AF		     1		.code
+ 000009AF  50		     1		push	eax						; preserve EAX
+ 000009B0  52		     1		push	edx						; preserve EDX
+ 000009B1  8D 15 00000078 R  1		lea		edx,bye				; get text
+ 000009B7  E8 00000000 E     1		call	WriteString				; write text
+ 000009BC  B8 00000001	     1		mov		eax,1				; get newline
+ 000009C1  83 F8 01	     1		cmp		eax,1					; 1 = newline ?
+ 000009C4  75 05	     1		jne		??0074						; NO: no newline
+ 000009C6  E8 00000000 E     1		call	Crlf					; carriage return
+ 000009CB  5A		     1	??0074:	pop		edx						; restore EDX
+ 000009CC  58		     1		pop		eax						; restore EAX
+					exit							; invoke code to terminate the program
+ 000009CD  6A 00	   *	    push   +000000000h
+ 000009CF  E8 00000000 E   *	    call   ExitProcess
+ 000009D4			main		endp
+				end			main
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    04/11/21 21:04:59
+%Lottery, Version 1      (lottery.asm			     Symbols 2 - 1
+
+
+
+
+Macros:
+
+                N a m e                 Type
+
+chkDups  . . . . . . . . . . . .	Proc
+detWin . . . . . . . . . . . . .	Proc
+drawB  . . . . . . . . . . . . .	Proc
+getT . . . . . . . . . . . . . .	Proc
+reset  . . . . . . . . . . . . .	Proc
+writ . . . . . . . . . . . . . .	Proc
+
+
+Structures and Unions:
+
+                N a m e                  Size
+                                         Offset      Type
+
+CONSOLE_CURSOR_INFO  . . . . . .	 00000005
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  bVisible . . . . . . . . . . .	 00000004	 Byte
+CONSOLE_SCREEN_BUFFER_INFO . . .	 00000016
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  dwCursorPos  . . . . . . . . .	 00000004	 DWord
+  wAttributes  . . . . . . . . .	 00000008	 Word
+  srWindow . . . . . . . . . . .	 0000000A	 QWord
+  maxWinSize . . . . . . . . . .	 00000012	 DWord
+COORD  . . . . . . . . . . . . .	 00000004
+  X  . . . . . . . . . . . . . .	 00000000	 Word
+  Y  . . . . . . . . . . . . . .	 00000002	 Word
+FILETIME . . . . . . . . . . . .	 00000008
+  loDateTime . . . . . . . . . .	 00000000	 DWord
+  hiDateTime . . . . . . . . . .	 00000004	 DWord
+Powerball  . . . . . . . . . . .	 00000018
+  white1 . . . . . . . . . . . .	 00000000	 DWord
+  white2 . . . . . . . . . . . .	 00000004	 DWord
+  white3 . . . . . . . . . . . .	 00000008	 DWord
+  white4 . . . . . . . . . . . .	 0000000C	 DWord
+  white5 . . . . . . . . . . . .	 00000010	 DWord
+  red  . . . . . . . . . . . . .	 00000014	 DWord
+SMALL_RECT . . . . . . . . . . .	 00000008
+  Left . . . . . . . . . . . . .	 00000000	 Word
+  Top  . . . . . . . . . . . . .	 00000002	 Word
+  Right  . . . . . . . . . . . .	 00000004	 Word
+  Bottom . . . . . . . . . . . .	 00000006	 Word
+SYSTEMTIME . . . . . . . . . . .	 00000010
+  wYear  . . . . . . . . . . . .	 00000000	 Word
+  wMonth . . . . . . . . . . . .	 00000002	 Word
+  wDayOfWeek . . . . . . . . . .	 00000004	 Word
+  wDay . . . . . . . . . . . . .	 00000006	 Word
+  wHour  . . . . . . . . . . . .	 00000008	 Word
+  wMinute  . . . . . . . . . . .	 0000000A	 Word
+  wSecond  . . . . . . . . . . .	 0000000C	 Word
+  wMilliseconds  . . . . . . . .	 0000000E	 Word
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 DWord	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000250 DWord	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000009D4 DWord	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+CloseHandle  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ClrScr . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CreateFileA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Crlf . . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Delay  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpMem  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpRegs . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FlushConsoleInputBuffer  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetCommandTail . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCP . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleScreenBufferInfo . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetDateTime  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetLocalTime . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetMseconds  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetNumberOfConsoleInputEvents  .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetStdHandle . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetSystemTime  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetTickCount . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Gotoxy . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Random32 . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+RandomRange  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Randomize  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadChar . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleA . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFile . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadHex  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleScreenBufferSize . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTextAttribute  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTitleA . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleWindowInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetFilePointer . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetTextColor . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Sleep  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_compare  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_copy . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_length . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_trim . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_ucase  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SystemTimeToFileTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WaitMsg  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteBin . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteChar  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleA  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputAttribute  . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputCharacterA . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteDec . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteHex . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteInt . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000009D4 Public STDCALL
+  L1 . . . . . . . . . . . . . .	L Near	 00000000 _TEXT	
+  ??0000 . . . . . . . . . . . .	L Near	 0000001C _TEXT	
+  ??0001 . . . . . . . . . . . .	L Near	 0000003A _TEXT	
+  ??0002 . . . . . . . . . . . .	L Near	 00000066 _TEXT	
+  ??0008 . . . . . . . . . . . .	L Near	 0000009F _TEXT	
+  ??0009 . . . . . . . . . . . .	L Near	 000000A6 _TEXT	
+  ??000A . . . . . . . . . . . .	L Near	 000000AB _TEXT	
+  ??0003 . . . . . . . . . . . .	L Near	 000000B6 _TEXT	
+  ??000B . . . . . . . . . . . .	L Near	 000000EF _TEXT	
+  ??000C . . . . . . . . . . . .	L Near	 000000F6 _TEXT	
+  ??000D . . . . . . . . . . . .	L Near	 000000FB _TEXT	
+  ??0004 . . . . . . . . . . . .	L Near	 00000106 _TEXT	
+  ??000E . . . . . . . . . . . .	L Near	 0000013F _TEXT	
+  ??000F . . . . . . . . . . . .	L Near	 00000146 _TEXT	
+  ??0010 . . . . . . . . . . . .	L Near	 0000014B _TEXT	
+  ??0005 . . . . . . . . . . . .	L Near	 00000156 _TEXT	
+  ??0011 . . . . . . . . . . . .	L Near	 0000018F _TEXT	
+  ??0012 . . . . . . . . . . . .	L Near	 00000196 _TEXT	
+  ??0013 . . . . . . . . . . . .	L Near	 0000019B _TEXT	
+  ??0006 . . . . . . . . . . . .	L Near	 000001A6 _TEXT	
+  ??0014 . . . . . . . . . . . .	L Near	 000001DF _TEXT	
+  ??0015 . . . . . . . . . . . .	L Near	 000001E6 _TEXT	
+  ??0016 . . . . . . . . . . . .	L Near	 000001EB _TEXT	
+  ??0007 . . . . . . . . . . . .	L Near	 000001F6 _TEXT	
+  ??0017 . . . . . . . . . . . .	L Near	 0000022B _TEXT	
+  ??0018 . . . . . . . . . . . .	L Near	 00000249 _TEXT	
+  ??0019 . . . . . . . . . . . .	L Near	 00000274 _TEXT	
+  ??001A . . . . . . . . . . . .	L Near	 0000029C _TEXT	
+  ??001B . . . . . . . . . . . .	L Near	 000002C4 _TEXT	
+  ??001C . . . . . . . . . . . .	L Near	 000002EC _TEXT	
+  ??001D . . . . . . . . . . . .	L Near	 0000031C _TEXT	
+  ??002A . . . . . . . . . . . .	L Near	 0000035D _TEXT	
+  ??0024 . . . . . . . . . . . .	L Near	 0000035F _TEXT	
+  ??002B . . . . . . . . . . . .	L Near	 0000037B _TEXT	
+  ??002C . . . . . . . . . . . .	L Near	 000003B5 _TEXT	
+  ??002D . . . . . . . . . . . .	L Near	 000003BC _TEXT	
+  ??002E . . . . . . . . . . . .	L Near	 000003C1 _TEXT	
+  ??0027 . . . . . . . . . . . .	L Near	 000003DA _TEXT	
+  ??002F . . . . . . . . . . . .	L Near	 000003F6 _TEXT	
+  ??0028 . . . . . . . . . . . .	L Near	 000003FD _TEXT	
+  ??0030 . . . . . . . . . . . .	L Near	 00000419 _TEXT	
+  ??0025 . . . . . . . . . . . .	L Near	 00000425 _TEXT	
+  ??0031 . . . . . . . . . . . .	L Near	 00000441 _TEXT	
+  ??0032 . . . . . . . . . . . .	L Near	 0000045F _TEXT	
+  ??0029 . . . . . . . . . . . .	L Near	 00000474 _TEXT	
+  ??0033 . . . . . . . . . . . .	L Near	 00000490 _TEXT	
+  ??0026 . . . . . . . . . . . .	L Near	 00000494 _TEXT	
+  ??0045 . . . . . . . . . . . .	L Near	 000004AE _TEXT	
+  ??0046 . . . . . . . . . . . .	L Near	 000004B4 _TEXT	
+  ??0047 . . . . . . . . . . . .	L Near	 000004C0 _TEXT	
+  ??0048 . . . . . . . . . . . .	L Near	 000004E9 _TEXT	
+  ??0056 . . . . . . . . . . . .	L Near	 00000505 _TEXT	
+  ??0057 . . . . . . . . . . . .	L Near	 00000523 _TEXT	
+  ??0058 . . . . . . . . . . . .	L Near	 0000054E _TEXT	
+  ??0059 . . . . . . . . . . . .	L Near	 00000576 _TEXT	
+  ??005A . . . . . . . . . . . .	L Near	 0000059E _TEXT	
+  ??005B . . . . . . . . . . . .	L Near	 000005C6 _TEXT	
+  ??005C . . . . . . . . . . . .	L Near	 000005F6 _TEXT	
+  ??005D . . . . . . . . . . . .	L Near	 00000620 _TEXT	
+  ??005E . . . . . . . . . . . .	L Near	 0000064A _TEXT	
+  ??005F . . . . . . . . . . . .	L Near	 00000674 _TEXT	
+  ??0049 . . . . . . . . . . . .	L Near	 0000068A _TEXT	
+  ??004B . . . . . . . . . . . .	L Near	 0000068A _TEXT	
+  ??0060 . . . . . . . . . . . .	L Near	 000006AB _TEXT	
+  ??0061 . . . . . . . . . . . .	L Near	 000006C9 _TEXT	
+  ??004C . . . . . . . . . . . .	L Near	 000006D0 _TEXT	
+  ??0062 . . . . . . . . . . . .	L Near	 000006F1 _TEXT	
+  ??0063 . . . . . . . . . . . .	L Near	 0000070F _TEXT	
+  ??004D . . . . . . . . . . . .	L Near	 00000716 _TEXT	
+  ??0064 . . . . . . . . . . . .	L Near	 00000737 _TEXT	
+  ??0065 . . . . . . . . . . . .	L Near	 00000755 _TEXT	
+  ??004E . . . . . . . . . . . .	L Near	 0000075C _TEXT	
+  ??0066 . . . . . . . . . . . .	L Near	 0000077D _TEXT	
+  ??0067 . . . . . . . . . . . .	L Near	 0000079B _TEXT	
+  ??004F . . . . . . . . . . . .	L Near	 000007A2 _TEXT	
+  ??0068 . . . . . . . . . . . .	L Near	 000007C3 _TEXT	
+  ??0069 . . . . . . . . . . . .	L Near	 000007E1 _TEXT	
+  ??0050 . . . . . . . . . . . .	L Near	 000007E8 _TEXT	
+  ??006A . . . . . . . . . . . .	L Near	 0000080D _TEXT	
+  ??006B . . . . . . . . . . . .	L Near	 0000082B _TEXT	
+  ??004A . . . . . . . . . . . .	L Near	 00000832 _TEXT	
+  ??0051 . . . . . . . . . . . .	L Near	 00000832 _TEXT	
+  ??006C . . . . . . . . . . . .	L Near	 00000853 _TEXT	
+  ??006D . . . . . . . . . . . .	L Near	 00000871 _TEXT	
+  ??0052 . . . . . . . . . . . .	L Near	 00000878 _TEXT	
+  ??006E . . . . . . . . . . . .	L Near	 00000899 _TEXT	
+  ??006F . . . . . . . . . . . .	L Near	 000008B7 _TEXT	
+  ??0053 . . . . . . . . . . . .	L Near	 000008BB _TEXT	
+  ??0070 . . . . . . . . . . . .	L Near	 000008DC _TEXT	
+  ??0071 . . . . . . . . . . . .	L Near	 000008FA _TEXT	
+  ??0055 . . . . . . . . . . . .	L Near	 000008FE _TEXT	
+  ??0072 . . . . . . . . . . . .	L Near	 0000091A _TEXT	
+  ??0054 . . . . . . . . . . . .	L Near	 0000091C _TEXT	
+  L2 . . . . . . . . . . . . . .	L Near	 0000098C _TEXT	
+  ??0073 . . . . . . . . . . . .	L Near	 000009A8 _TEXT	
+  L3 . . . . . . . . . . . . . .	L Near	 000009AF _TEXT	
+  ??0074 . . . . . . . . . . . .	L Near	 000009CB _TEXT	
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+??001E . . . . . . . . . . . . .	Byte	 000000AA _DATA	
+??001F . . . . . . . . . . . . .	Byte	 000000D8 _DATA	
+??0020 . . . . . . . . . . . . .	Byte	 00000100 _DATA	
+??0021 . . . . . . . . . . . . .	Byte	 00000109 _DATA	
+??0022 . . . . . . . . . . . . .	Byte	 0000013D _DATA	
+??0023 . . . . . . . . . . . . .	Byte	 00000171 _DATA	
+??0034 . . . . . . . . . . . . .	Byte	 0000019A _DATA	
+??0035 . . . . . . . . . . . . .	Byte	 0000019B _DATA	
+??0036 . . . . . . . . . . . . .	Byte	 0000019C _DATA	
+??0037 . . . . . . . . . . . . .	Byte	 000001B6 _DATA	
+??0038 . . . . . . . . . . . . .	Byte	 000001BE _DATA	
+??0039 . . . . . . . . . . . . .	Byte	 000001C4 _DATA	
+??003A . . . . . . . . . . . . .	Byte	 000001D1 _DATA	
+??003B . . . . . . . . . . . . .	Byte	 000001E3 _DATA	
+??003C . . . . . . . . . . . . .	Byte	 000001EF _DATA	
+??003D . . . . . . . . . . . . .	Byte	 000001F8 _DATA	
+??003E . . . . . . . . . . . . .	Byte	 000001FC _DATA	
+??003F . . . . . . . . . . . . .	Byte	 00000200 _DATA	
+??0040 . . . . . . . . . . . . .	Byte	 00000206 _DATA	
+??0041 . . . . . . . . . . . . .	Byte	 0000020F _DATA	
+??0042 . . . . . . . . . . . . .	Byte	 0000021B _DATA	
+??0043 . . . . . . . . . . . . .	Byte	 0000022C _DATA	
+??0044 . . . . . . . . . . . . .	Byte	 0000024D _DATA	
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000003h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
+CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
+CreateFile . . . . . . . . . . .	Text   	 CreateFileA
+DEV1 . . . . . . . . . . . . . .	Byte	 00000081 _DATA	
+DEV2 . . . . . . . . . . . . . .	Byte	 00000099 _DATA	
+DEV3 . . . . . . . . . . . . . .	Byte	 000000A1 _DATA	
+DEV4 . . . . . . . . . . . . . .	Byte	 000000A7 _DATA	
+DO_NOT_SHARE . . . . . . . . . .	Number	 00000000h   
+ENABLE_ECHO_INPUT  . . . . . . .	Number	 00000004h   
+ENABLE_LINE_INPUT  . . . . . . .	Number	 00000002h   
+ENABLE_MOUSE_INPUT . . . . . . .	Number	 00000010h   
+ENABLE_PROCESSED_INPUT . . . . .	Number	 00000001h   
+ENABLE_PROCESSED_OUTPUT  . . . .	Number	 00000001h   
+ENABLE_WINDOW_INPUT  . . . . . .	Number	 00000008h   
+ENABLE_WRAP_AT_EOL_OUTPUT  . . .	Number	 00000002h   
+FALSE  . . . . . . . . . . . . .	Number	 00000000h   
+FILE_APPEND_DATA . . . . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_ARCHIVE . . . . .	Number	 00000020h   
+FILE_ATTRIBUTE_COMPRESSED  . . .	Number	 00000800h   
+FILE_ATTRIBUTE_DEVICE  . . . . .	Number	 00000040h   
+FILE_ATTRIBUTE_DIRECTORY . . . .	Number	 00000010h   
+FILE_ATTRIBUTE_ENCRYPTED . . . .	Number	 00004000h   
+FILE_ATTRIBUTE_HIDDEN  . . . . .	Number	 00000002h   
+FILE_ATTRIBUTE_NORMAL  . . . . .	Number	 00000080h   
+FILE_ATTRIBUTE_NOT_CONTENT_INDEXED .	Number	 00002000h   
+FILE_ATTRIBUTE_OFFLINE . . . . .	Number	 00001000h   
+FILE_ATTRIBUTE_READONLY  . . . .	Number	 00000001h   
+FILE_ATTRIBUTE_REPARSE_POINT . .	Number	 00000400h   
+FILE_ATTRIBUTE_SPARSE_FILE . . .	Number	 00000200h   
+FILE_ATTRIBUTE_SYSTEM  . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_TEMPORARY . . . .	Number	 00000100h   
+FILE_BEGIN . . . . . . . . . . .	Number	 00000000h   
+FILE_CURRENT . . . . . . . . . .	Number	 00000001h   
+FILE_DELETE_CHILD  . . . . . . .	Number	 00000040h   
+FILE_END . . . . . . . . . . . .	Number	 00000002h   
+FILE_READ_DATA . . . . . . . . .	Number	 00000001h   
+FILE_SHARE_DELETE  . . . . . . .	Number	 00000004h   
+FILE_SHARE_READ  . . . . . . . .	Number	 00000001h   
+FILE_SHARE_WRITE . . . . . . . .	Number	 00000002h   
+FILE_WRITE_DATA  . . . . . . . .	Number	 00000002h   
+FOCUS_EVENT  . . . . . . . . . .	Number	 00000010h   
+GENERIC_ALL  . . . . . . . . . .	Number	 10000000h   
+GENERIC_EXECUTE  . . . . . . . .	Number	 20000000h   
+GENERIC_READ . . . . . . . . . .	Number	 -80000000h   
+GENERIC_WRITE  . . . . . . . . .	Number	 40000000h   
+INVALID_HANDLE_VALUE . . . . . .	Number	 -00000001h   
+KEY_EVENT  . . . . . . . . . . .	Number	 00000001h   
+MENU_EVENT . . . . . . . . . . .	Number	 00000008h   
+MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h   
+NULL . . . . . . . . . . . . . .	Number	 00000000h   
+OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
+OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
+PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
+ReadConsoleInput . . . . . . . .	Text   	 ReadConsoleInputA
+ReadConsole  . . . . . . . . . .	Text   	 ReadConsoleA
+STD_INPUT_HANDLE . . . . . . . .	Number	 -0000000Ah   
+STD_OUTPUT_HANDLE  . . . . . . .	Number	 -0000000Bh   
+SetConsoleTitle  . . . . . . . .	Text   	 SetConsoleTitleA
+TRUE . . . . . . . . . . . . . .	Number	 00000001h   
+TRUNCATE_EXISTING  . . . . . . .	Number	 00000005h   
+WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
+WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
+WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
+black  . . . . . . . . . . . . .	Number	 00000000h   
+blue . . . . . . . . . . . . . .	Number	 00000001h   
+brown  . . . . . . . . . . . . .	Number	 00000006h   
+bye  . . . . . . . . . . . . . .	Byte	 00000078 _DATA	
+choice . . . . . . . . . . . . .	Byte	 0000004E _DATA	
+customer . . . . . . . . . . . .	Powerball  00000018 _DATA	
+cyan . . . . . . . . . . . . . .	Number	 00000003h   
+drawing  . . . . . . . . . . . .	Powerball  00000000 _DATA	
+exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+gray . . . . . . . . . . . . . .	Number	 00000008h   
+green  . . . . . . . . . . . . .	Number	 00000002h   
+lightBlue  . . . . . . . . . . .	Number	 00000009h   
+lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
+lightGray  . . . . . . . . . . .	Number	 00000007h   
+lightGreen . . . . . . . . . . .	Number	 0000000Ah   
+lightMagenta . . . . . . . . . .	Number	 0000000Dh   
+lightRed . . . . . . . . . . . .	Number	 0000000Ch   
+magenta  . . . . . . . . . . . .	Number	 00000005h   
+oops . . . . . . . . . . . . . .	Byte	 00000057 _DATA	
+prompt . . . . . . . . . . . . .	Byte	 00000030 _DATA	
+red  . . . . . . . . . . . . . .	Number	 00000004h   
+white  . . . . . . . . . . . . .	Number	 0000000Fh   
+yellow . . . . . . . . . . . . .	Number	 0000000Eh   
+
+	   0 Warnings
+	   0 Errors
