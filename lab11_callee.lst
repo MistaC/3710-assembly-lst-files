@@ -1,0 +1,153 @@
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    04/16/21 10:45:48
+callee.asm						     Page 1 - 1
+
+
+				;TITLE callee (callee.asm)
+
+				; Chase Carroll
+				; CPEN 3710
+
+				; This program is called by a C++ program with three
+				; float values A, B, and C . It uses these values to compute
+				; the roots of the quadratic formula. If the roots would
+				; be complex, -1 is returned in EAX. If a division by
+				; zero error were to occur, -2 is returned to EAX.
+				; Otherwise, 0 is returned to EAX and the roots are
+				; returned via their respective pointers.
+				; Receives: A, B, C, and result pointers via the stack frame.
+				; Returns: 0 in EAX and results in memory if successful;
+				; -1 in EAX if roots are complex.
+				; -2 in EAX if division by zero error would occur.
+				; Modifies: FPU stack registers. No integer registers
+				; other than EAX are changed.
+
+				;include Irvine32.inc
+				.586
+				.model FLAT, C 
+
+				public compute				; compute can be called by external code
+
+ 00000000			.data
+ 00000000 00000000		var1	real4 ?				; placeholder for dumping values
+ 00000004 FFFC			var2	sword -4			; for use under radical
+ 00000006 0002			var3	sword 2				; for use in divisor
+
+ 00000000			.code
+
+ 00000000			compute proc
+					
+ 00000000  55				push  ebp					; save caller's base pointer
+ 00000001  8B EC			mov   ebp, esp				; set up a new base pointer
+					
+					;saved base pointer +0  	; contents of stack frame
+					;return address +4
+					;a +8
+					;b +12
+					;c +16
+					;root1 pointer +20
+					;root2 pointer +24
+					
+ 00000003  9B DB E3			finit                   	; prepare FPU for action
+ 00000006  D9 45 08			fld		real4 ptr[ebp+8]	; a
+ 00000009  D9 EE			fldz						; 0, a
+ 0000000B  DB F1			fcomi	st(0),st(1)			; is a = 0 ?
+ 0000000D  74 7C			je		zDivision			; YES: Division by zero error
+ 0000000F  D9 1D 00000000 R		fstp	var1				; NO: a
+ 00000015  D9 45 10			fld		real4 ptr[ebp+16]	; c, a
+ 00000018  DE C9			fmul						; a*c
+ 0000001A  DF 05 00000004 R		fild	var2				; -4, a*c
+ 00000020  DE C9			fmul						; -4*a*c
+ 00000022  D9 45 0C			fld		real4 ptr[ebp+12]	; b, -4*a*c
+ 00000025  D9 45 0C			fld		real4 ptr[ebp+12]	; b, b, -4*a*c
+ 00000028  DE C9			fmul						; b*b, -4*a*c
+ 0000002A  DE C1			fadd						; b*b + -4*a*c
+ 0000002C  D9 EE			fldz						; 0, b*b + -4*a*c
+ 0000002E  DB F1			fcomi	st(0),st(1)			; check radical value for negativity
+ 00000030  77 60			ja		cRoot				; YES: Roots are complex error
+ 00000032  D9 1D 00000000 R		fstp	var1				; b*b + -4*a*c
+ 00000038  D9 FA			fsqrt						; SQRT(b*b + -4*a*c)
+					; Must get both positive and negative value for finding both roots
+ 0000003A  D9 15 00000000 R		fst		var1				; store square root value
+					; Calculations for addition square root
+ 00000040  D9 45 0C			fld		real4 ptr[ebp+12]	; b, SQRT(b*b + -4*a*c)
+ 00000043  D9 E0			fchs						; -b, SQRT(b*b + -4*a*c)
+ 00000045  DE C1			fadd						; -b + SQRT(b*b + -4*a*c)
+ 00000047  D9 45 08			fld		real4 ptr[ebp+8]	; a, -b + SQRT(b*b + -4*a*c)
+ 0000004A  DF 05 00000006 R		fild	var3				; 2, a, -b + SQRT(b*b + -4*a*c)
+ 00000050  DE C9			fmul						; 2*a, -b + SQRT(b*b + -4*a*c)
+ 00000052  DE F9			fdiv						; -b + SQRT(b*b + -4*a*c) / 2*a
+ 00000054  8B 7D 14			mov		edi,[ebp+20]		; get root1 pointer
+ 00000057  D9 1F			fstp	real4 ptr[edi]		; store root 1
+ 00000059  BF 00000000			mov		edi,0				; clear EDI
+ 0000005E  D9 05 00000000 R		fld		var1				; SQRT(b*b + -4*a*c)
+ 00000064  D9 E0			fchs						; -SQRT(b*b + -4*a*c)
+					; Calculations for subtraction square root
+ 00000066  D9 45 0C			fld		real4 ptr[ebp+12]	; b, SQRT(b*b + -4*a*c)
+ 00000069  D9 E0			fchs						; -b, SQRT(b*b + -4*a*c)
+ 0000006B  DE C1			fadd						; -b - SQRT(b*b + -4*a*c)
+ 0000006D  D9 45 08			fld		real4 ptr[ebp+8]	; a, -b - SQRT(b*b + -4*a*c)
+ 00000070  DF 05 00000006 R		fild	var3				; 2, a, -b - SQRT(b*b + -4*a*c)
+ 00000076  DE C9			fmul						; 2*a, -b - SQRT(b*b + -4*a*c)
+ 00000078  DE F9			fdiv						; -b - SQRT(b*b + -4*a*c) / 2*a
+ 0000007A  8B 7D 18			mov		edi,[ebp+24]		; get root2 pointer
+ 0000007D  D9 1F			fstp	real4 ptr[edi]		; store root 1
+ 0000007F  BF 00000000			mov		edi,0				; clear EDI
+ 00000084  B8 00000000			mov		eax,0				; execution finished successfully
+ 00000089  EB 0C			jmp		finish				; jump to end
+
+ 0000008B			zDivision:
+ 0000008B  B8 FFFFFFFE			mov		eax,-2			; failure: divide by zero
+ 00000090  EB 05			jmp		finish			; jump to end
+ 00000092			cRoot:
+ 00000092  B8 FFFFFFFF			mov		eax,-1			; failure: complex roots
+ 00000097			finish:					
+ 00000097  5D				pop ebp                 ; restore previous base pointer
+ 00000098  C3				ret                     ; calculations done, return
+
+ 00000099			compute endp
+
+				END
+Microsoft (R) Macro Assembler Version 14.00.24210.0	    04/16/21 10:45:48
+callee.asm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000008 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000099 Para	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+compute  . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000099 Public C
+  zDivision  . . . . . . . . . .	L Near	 0000008B _TEXT	
+  cRoot  . . . . . . . . . . . .	L Near	 00000092 _TEXT	
+  finish . . . . . . . . . . . .	L Near	 00000097 _TEXT	
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000001h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+var1 . . . . . . . . . . . . . .	DWord	 00000000 _DATA	
+var2 . . . . . . . . . . . . . .	Word	 00000004 _DATA	
+var3 . . . . . . . . . . . . . .	Word	 00000006 _DATA	
+
+	   0 Warnings
+	   0 Errors
